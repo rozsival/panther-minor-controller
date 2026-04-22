@@ -1,0 +1,17 @@
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm commitlint --edit {1}
+
+pre-commit:
+  parallel: true
+  jobs:
+    - run: pnpm prettier --write {staged_files}
+      glob:
+        - '**/*.md'
+        - '**/*.toml'
+        - '**/*.yaml'
+        - '**/*.yml'
+        - '**/*.json'
+        - 'panther-minor-controller.code-workspace'
+      stage_fixed: true

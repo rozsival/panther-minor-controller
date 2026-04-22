@@ -1,0 +1,17 @@
+# IDE
+.idea
+.vscode
+
+# Environment
+.env
+
+# NPM
+node_modules
+
+# Temporary files
+*.backup
+*.log
+log
+logs
+temp
+tmp
