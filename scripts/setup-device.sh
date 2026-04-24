@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ── Color output ──────────────────────────────────────────────────────────────
+log_info() { printf '\033[0;34m[INFO]\033[0m  %s\n' "$*"; }
+log_success() { printf '\033[0;32m[OK]\033[0m    %s\n' "$*"; }
+log_warn() { printf '\033[1;33m[WARN]\033[0m  %s\n' "$*"; }
+log_error() {
+  printf '\033[0;31m[ERROR]\033[0m %s\n' "$*" >&2
+  exit 1
+}
+
+# ── Pre-flight ────────────────────────────────────────────────────────────────
+[[ $EUID -eq 0 ]] || log_error "This script must be run as root (use sudo)."
+
+# ── Interactive prompts ───────────────────────────────────────────────────────
+echo ""
+echo "🖲️  Panther Minor Controller — Device Setup"
+echo "============================================"
+
+read -r -p "Enter server name (default: ${HOSTNAME}): " server_name
+PANTHER_SERVER_NAME="${server_name:-$HOSTNAME}"
+
+read -r -p "Enter allowed user (default: ${USER}): " allowed_user
+PANTHER_ALLOWED_USER="${allowed_user:-$USER}"
+
+read -r -p "Enter SSH port (default: 2222): " ssh_port
+PANTHER_SSH_PORT="${ssh_port:-2222}"
+
+read -r -p "Enter timezone (default: Europe/Prague): " timezone
+PANTHER_TIMEZONE="${timezone:-Europe/Prague}"
+
+echo ""
+echo "📋 Setup Summary:"
+echo "   Server Name : $PANTHER_SERVER_NAME"
+echo "   Allowed User: $PANTHER_ALLOWED_USER"
+echo "   SSH Port    : $PANTHER_SSH_PORT"
+echo "   Timezone    : $PANTHER_TIMEZONE"
+echo ""
+
+read -r -p "Proceed with setup? (y/N): " confirm
+[[ "$confirm" =~ ^[Yy]$ ]] || {
+  log_warn "Setup cancelled."
+  exit 0
+}
+
+# ── Step 1: Timezone ─────────────────────────────────────────────────────────
+log_info "Setting timezone to $PANTHER_TIMEZONE..."
+timedatectl set-timezone "$PANTHER_TIMEZONE"
+log_success "Timezone set to $PANTHER_TIMEZONE."
+
+# ── Step 2: Update & essential packages ──────────────────────────────────────
+log_info "Updating system and installing essential packages..."
+apt update -y
+apt upgrade -y
+apt install -y \
+  build-essential \
+  fail2ban \
+  htop \
+  jq \
+  starship \
+  tree \
+  ufw \
+  unattended-upgrades
+
+log_success "Essential packages installed."
+
+# ── Step 3: Git ──────────────────────────────────────────────────────────────
+log_info "Configuring Git for $PANTHER_ALLOWED_USER..."
+sudo -u "$PANTHER_ALLOWED_USER" git config --global user.name "$PANTHER_SERVER_NAME"
+sudo -u "$PANTHER_ALLOWED_USER" git config --global user.email "${PANTHER_ALLOWED_USER}@${PANTHER_SERVER_NAME}"
+sudo -u "$PANTHER_ALLOWED_USER" git config --global pull.rebase true
+sudo -u "$PANTHER_ALLOWED_USER" git config --global credential.helper store
+log_success "Git configured for $PANTHER_ALLOWED_USER."
+
+# ── Step 4: SSH hardening ───────────────────────────────────────────────────
+log_info "Hardening SSH (port $PANTHER_SSH_PORT, key-only auth)..."
+
+SSHD_CONFIG="/etc/ssh/sshd_config"
+if [[ ! -f "${SSHD_CONFIG}.orig" ]]; then
+  cp "$SSHD_CONFIG" "${SSHD_CONFIG}.orig"
+  log_info "Original sshd_config backed up."
+fi
+
+# Remove any drop-in overrides
+rm -f /etc/ssh/sshd_config.d/*.conf
+
+# Apply settings via sed (portable, no augeas dependency)
+declare -A sshd_settings=(
+  [Port]="$PANTHER_SSH_PORT"
+  [PasswordAuthentication]="no"
+  [KbdInteractiveAuthentication]="no"
+  [ChallengeResponseAuthentication]="no"
+  [PubkeyAuthentication]="yes"
+  [AuthenticationMethods]="publickey"
+  [UsePAM]="no"
+  [PermitRootLogin]="no"
+  [MaxAuthTries]="3"
+  [LoginGraceTime]="30"
+  [X11Forwarding]="no"
+  [AllowTcpForwarding]="no"
+)
+
+for key in "${!sshd_settings[@]}"; do
+  value="${sshd_settings[$key]}"
+  if grep -qE "^#${key} " "$SSHD_CONFIG" 2>/dev/null; then
+    sed -i "s|^#${key} .*|${key} ${value}|" "$SSHD_CONFIG"
+  elif grep -qE "^${key} " "$SSHD_CONFIG" 2>/dev/null; then
+    sed -i "s|^${key} .*|${key} ${value}|" "$SSHD_CONFIG"
+  else
+    echo "${key} ${value}" >>"$SSHD_CONFIG"
+  fi
+done
+
+# AllowUsers (append if not present)
+if ! grep -qE "^AllowUsers " "$SSHD_CONFIG"; then
+  echo "AllowUsers $PANTHER_ALLOWED_USER" >>"$SSHD_CONFIG"
+fi
+
+# Validate before applying
+if ! sshd -t 2>&1; then
+  log_error "sshd configuration is invalid — aborting to avoid locking you out."
+  cp "${SSHD_CONFIG}.orig" "$SSHD_CONFIG"
+  log_info "Restored original sshd_config."
+fi
+
+systemctl restart ssh
+log_success "SSH hardened on port $PANTHER_SSH_PORT."
+
+# ── Step 5: UFW ──────────────────────────────────────────────────────────────
+log_info "Configuring UFW firewall..."
+ufw --force reset
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow "${PANTHER_SSH_PORT}/tcp" comment 'SSH'
+ufw --force enable
+log_success "UFW enabled. Open ports: SSH($PANTHER_SSH_PORT). All other traffic blocked."
+
+# ── Step 6: fail2ban ─────────────────────────────────────────────────────────
+log_info "Configuring fail2ban..."
+
+JAIL_LOCAL="/etc/fail2ban/jail.local"
+cat >"$JAIL_LOCAL" <<EOF
+[sshd]
+enabled  = true
+port     = ${PANTHER_SSH_PORT}
+filter   = sshd
+logpath  = /var/log/auth.log
+maxretry = 3
+bantime  = 1h
+findtime = 10m
+EOF
+
+systemctl enable --now fail2ban
+systemctl restart fail2ban
+log_success "fail2ban configured and running."
+
+# ── Step 7: Tailscale ────────────────────────────────────────────────────────
+log_info "Installing Tailscale..."
+curl -fsSL "https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg" |
+  tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+curl -fsSL "https://pkgs.tailscale.com/stable/debian/trixie.tailscale-keyring.list" |
+  tee /etc/apt/sources.list.d/tailscale.list >/dev/null
+
+apt update -y
+apt install -y tailscale
+
+if command -v tailscale >/dev/null 2>&1; then
+  log_success "Tailscale installed. Run 'sudo tailscale up' to authenticate."
+else
+  log_error "Tailscale installation failed."
+fi
+
+# ── Step 8: Shell + Starship ─────────────────────────────────────────────────
+log_info "Setting up shell with Starship prompt for $PANTHER_ALLOWED_USER..."
+
+# Ensure home dir exists
+mkdir -p "/home/$PANTHER_ALLOWED_USER"
+
+BASHRC="/home/$PANTHER_ALLOWED_USER/.bashrc"
+if ! grep -qF 'starship init bash' "$BASHRC" 2>/dev/null; then
+  printf '\n# Starship prompt\neval "$(starship init bash)"\n' >>"$BASHRC"
+  chown "$PANTHER_ALLOWED_USER:$PANTHER_ALLOWED_USER" "$BASHRC"
+fi
+
+loginctl enable-linger "$PANTHER_ALLOWED_USER" 2>/dev/null || true
+log_success "Shell set up with Starship prompt for $PANTHER_ALLOWED_USER."
+
+# ── Summary ──────────────────────────────────────────────────────────────────
+echo ""
+echo -e "\033[0;32m╔══════════════════════════════════════════════╗\033[0m"
+echo -e "\033[0;32m║  🖲️  Panther Minor Controller setup complete! ║\033[0m"
+echo -e "\033[0;32m╠══════════════════════════════════════════════╣\033[0m"
+printf "\033[0;32m║  Timezone   : %-30s║\033[0m\n" "$PANTHER_TIMEZONE"
+printf "\033[0;32m║  SSH port   : %-30s║\033[0m\n" "$PANTHER_SSH_PORT"
+printf "\033[0;32m║  User       : %-30s║\033[0m\n" "$PANTHER_ALLOWED_USER"
+printf "\033[0;32m║  Tailscale  : %-30s║\033[0m\n" "installed"
+printf "\033[0;32m║  Firewall   : %-30s║\033[0m\n" "UFW active"
+printf "\033[0;32m║  fail2ban   : %-30s║\033[0m\n" "active"
+printf "\033[0;32m║  Starship   : %-30s║\033[0m\n" "configured"
+echo -e "\033[0;32m╚══════════════════════════════════════════════╝\033[0m"
+echo ""
+
+log_warn "⚠  To finish Tailscale setup, run: sudo tailscale up"
+echo ""
+
+log_info "Reconnection: ssh -p $PANTHER_SSH_PORT $PANTHER_ALLOWED_USER@<server-ip>"
