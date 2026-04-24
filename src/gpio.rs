@@ -1,3 +1,5 @@
+#[cfg(target_os = "linux")]
+use crate::error::AppError;
 use crate::error::Result;
 use async_trait::async_trait;
 use std::time::Duration;
