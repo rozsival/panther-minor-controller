@@ -75,10 +75,12 @@ impl Relay {
         let pin_num = pin_number.unwrap_or(DEFAULT_GPIO_PIN);
         let gpio = rppal::gpio::Gpio::new()
             .map_err(|e| AppError::GpioSetup(format!("Failed to initialize GPIO: {e}")))?;
-        let pin = gpio
+        let mut pin = gpio
             .get(pin_num)
             .map_err(|e| AppError::GpioSetup(format!("Failed to get GPIO pin {pin_num}: {e}")))?
             .into_output();
+
+        pin.set_reset_on_drop(false);
 
         Ok(Self { pin: Some(pin) })
     }
