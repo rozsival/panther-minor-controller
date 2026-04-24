@@ -41,8 +41,12 @@ async fn main() -> Result<()> {
 
     let relay = Relay::new(gpio_pin)?;
 
-    // Parse API token from environment (empty = no auth required).
-    let token = std::env::var("PANTHER_MINOR_CONTROLLER_TOKEN").unwrap_or_default();
+    // Parse API token from environment (required).
+    let token = std::env::var("PANTHER_MINOR_CONTROLLER_TOKEN").map_err(|_| {
+        AppError::Http(
+            "PANTHER_MINOR_CONTROLLER_TOKEN environment variable is required".to_string(),
+        )
+    })?;
 
     // Parse port from environment (default: 8080).
     let port: u16 = std::env::var("PANTHER_MINOR_CONTROLLER_PORT")
