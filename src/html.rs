@@ -287,6 +287,34 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
             allButtons.forEach(b => b.disabled = true);
         }
 
+        function setPolling() {
+            dot.className = 'dot busy';
+            text.textContent = 'Verifying…';
+            logEl.innerHTML = '<span class="msg busy">Waiting for device to stabilize…</span>';
+            allButtons.forEach(b => b.disabled = true);
+        }
+
+        async function pollStatus(expectedPowerOn, delayMs, pollIntervalMs, maxAttempts) {
+            // Wait for the expected delay before starting to poll
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+                try {
+                    const resp = await fetch('/api/status', {
+                        headers: API_TOKEN ? { 'Authorization': 'Bearer ' + API_TOKEN } : {},
+                    });
+                    const data = await resp.json();
+                    if (data.power_on === expectedPowerOn) {
+                        return true;
+                    }
+                } catch {
+                    // Connection error, try again
+                }
+            }
+            return false;
+        }
+
         function updateButtons(powerOn) {
             btnPowerOn.disabled = powerOn;
             btnPowerOff.disabled = !powerOn;
@@ -298,6 +326,7 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
             dot.className = 'dot success';
             text.textContent = 'Online';
             updateButtons(powerOn);
+            logEl.innerHTML = '<span>Waiting for action…</span>';
         }
 
         function setOffline() {
@@ -332,34 +361,56 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
                 const data = await resp.json();
                 if (resp.ok) {
                     logEl.innerHTML = '<span class="msg success">' + data.message + '</span>';
-                    const powerOn = action === 'power-on' || action === 'reset';
+                    const expectedPowerOn = action === 'power-on' || action === 'reset';
+                    const delayMs = data.expected_delay_ms || 2000;
+                    const pollIntervalMs = data.poll_ms || 2000;
 
-                    if (powerOn) {
-                        setOnline(powerOn);
+                    // Poll for status to confirm the device actually reached the expected state
+                    setPolling();
+                    const confirmed = await pollStatus(expectedPowerOn, delayMs, pollIntervalMs, 15);
+
+                    if (confirmed) {
+                        if (expectedPowerOn) {
+                            setOnline(true);
+                        } else {
+                            setOffline();
+                        }
                     } else {
-                        setOffline();
+                        // Timeout or mismatch — fall back to optimistic state
+                        logEl.innerHTML = '<span class="msg busy">Device state not confirmed — showing optimistic state</span>';
+                        if (expectedPowerOn) {
+                            setOnline(true);
+                        } else {
+                            setOffline();
+                        }
                     }
                 } else {
                     logEl.innerHTML = '<span class="msg error">' + data.message + '</span>';
                     updateButtons(btnPowerOn.disabled);
                 }
             } catch (err) {
-                setError('Connection failed');
+                setError('Network error');
             }
         }
 
         // Fetch initial state on page load
         (async () => {
             try {
-                const resp = await fetch('/api/health');
+                const resp = await fetch('/api/health', {
+                    headers: API_TOKEN ? { 'Authorization': 'Bearer ' + API_TOKEN } : {},
+                });
                 const data = await resp.json();
                 if (resp.ok) {
-                    setOnline(data.power_on);
+                    if (data.power_on) {
+                        setOnline(data.power_on);
+                    } else {
+                        setOffline();
+                    }
                 } else {
-                    setOffline();
+                    setError('Connection failed');
                 }
             } catch {
-                setOffline();
+                setError('Network error');
             }
         })();
     </script>

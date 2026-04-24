@@ -28,6 +28,8 @@ struct AppState {
     token: String,
     /// Whether the device is currently powered on.
     power_on: std::sync::Arc<std::sync::RwLock<bool>>,
+    /// Status polling interval in milliseconds (default: 2000).
+    poll_ms: u64,
 }
 
 #[tokio::main]
@@ -48,10 +50,17 @@ async fn main() -> Result<()> {
         .and_then(|v| v.parse().ok())
         .unwrap_or(8080);
 
+    // Parse status poll interval from environment (default: 2000ms).
+    let poll_ms: u64 = std::env::var("PANTHER_MINOR_CONTROLLER_STATUS_POLL_MS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(2000);
+
     let state = AppState {
         relay: Arc::new(Mutex::new(relay)),
         token,
         power_on: Arc::new(std::sync::RwLock::new(false)),
+        poll_ms,
     };
 
     // Bind to localhost only — never accept remote connections
@@ -141,7 +150,19 @@ where
                 &serde_json::json!({
                     "status": "healthy",
                     "version": env!("CARGO_PKG_VERSION"),
-                    "power_on": power_on
+                    "power_on": power_on,
+                    "poll_ms": state.poll_ms
+                }),
+            ))
+        }
+
+        ("GET", "/api/status") => {
+            let power_on = *state.power_on.read().unwrap();
+            Ok(json_response(
+                StatusCode::OK,
+                &serde_json::json!({
+                    "power_on": power_on,
+                    "poll_ms": state.poll_ms
                 }),
             ))
         }
@@ -175,7 +196,8 @@ where
                 &serde_json::json!({
                     "status": "success",
                     "action": "power-on",
-                    "message": "Short press (0.5s) sent"
+                    "message": "Short press (0.5s) sent",
+                    "expected_delay_ms": 1000
                 }),
             ))
         }
@@ -199,7 +221,8 @@ where
                 &serde_json::json!({
                     "status": "success",
                     "action": "power-off",
-                    "message": "Graceful shutdown signal sent (0.5s)"
+                    "message": "Graceful shutdown signal sent (0.5s)",
+                    "expected_delay_ms": 1000
                 }),
             ))
         }
@@ -223,7 +246,8 @@ where
                 &serde_json::json!({
                     "status": "success",
                     "action": "shutdown",
-                    "message": "Force shutdown (5s) sent"
+                    "message": "Force shutdown (5s) sent",
+                    "expected_delay_ms": 6000
                 }),
             ))
         }
@@ -247,7 +271,8 @@ where
                 &serde_json::json!({
                     "status": "success",
                     "action": "reset",
-                    "message": "Hard reset sequence sent (5s + 2s pause + 0.5s)"
+                    "message": "Hard reset sequence sent (5s + 2s pause + 0.5s)",
+                    "expected_delay_ms": 8000
                 }),
             ))
         }
@@ -318,6 +343,8 @@ mod tests {
         token: String,
         /// Whether the device is powered on.
         power_on: Arc<std::sync::RwLock<bool>>,
+        /// Status polling interval in ms.
+        poll_ms: u64,
     }
 
     impl TestState {
@@ -329,6 +356,7 @@ mod tests {
                 calls,
                 token: String::new(), // no auth by default
                 power_on: Arc::new(std::sync::RwLock::new(false)),
+                poll_ms: 2000,
             }
         }
 
@@ -341,6 +369,7 @@ mod tests {
                 calls,
                 token: token.to_string(),
                 power_on: Arc::new(std::sync::RwLock::new(false)),
+                poll_ms: 2000,
             }
         }
 
@@ -349,6 +378,7 @@ mod tests {
                 relay: self.relay.clone(),
                 token: self.token.clone(),
                 power_on: self.power_on.clone(),
+                poll_ms: self.poll_ms,
             }
         }
 
@@ -897,5 +927,146 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    // ── Status endpoint ──────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn status_returns_200() {
+        let state = test_state();
+        let resp = handle_request(request("GET", "/api/status"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn status_returns_power_on_false() {
+        let state = test_state();
+        let resp = handle_request(request("GET", "/api/status"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["power_on"], false);
+    }
+
+    #[tokio::test]
+    async fn status_returns_power_on_true_after_power_on() {
+        let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        let resp = handle_request(request("GET", "/api/status"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["power_on"], true);
+    }
+
+    #[tokio::test]
+    async fn status_returns_poll_ms() {
+        let state = test_state();
+        let resp = handle_request(request("GET", "/api/status"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["poll_ms"], 2000);
+    }
+
+    #[tokio::test]
+    async fn status_requires_auth_when_token_set() {
+        let state = TestState::with_auth("secret");
+        let resp = handle_request(request("GET", "/api/status"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn status_accessible_with_correct_auth() {
+        let state = TestState::with_auth("secret");
+        let resp = handle_request(
+            request_with_auth("GET", "/api/status", "secret"),
+            state.app_state(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn status_has_json_content_type() {
+        let state = test_state();
+        let resp = handle_request(request("GET", "/api/status"), state.app_state())
+            .await
+            .unwrap();
+        let ct = resp
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(ct.starts_with("application/json"));
+    }
+
+    // ── Expected delay ───────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn power_on_response_contains_expected_delay_ms() {
+        let state = test_state();
+        let resp = handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["expected_delay_ms"], 1000);
+    }
+
+    #[tokio::test]
+    async fn power_off_response_contains_expected_delay_ms() {
+        let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        let resp = handle_request(request("POST", "/api/power-off"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["expected_delay_ms"], 1000);
+    }
+
+    #[tokio::test]
+    async fn shutdown_response_contains_expected_delay_ms() {
+        let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        let resp = handle_request(request("POST", "/api/shutdown"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["expected_delay_ms"], 6000);
+    }
+
+    #[tokio::test]
+    async fn reset_response_contains_expected_delay_ms() {
+        let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        let resp = handle_request(request("POST", "/api/reset"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["expected_delay_ms"], 8000);
+    }
+
+    #[tokio::test]
+    async fn health_response_contains_poll_ms() {
+        let state = test_state();
+        let resp = handle_request(request("GET", "/api/health"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["poll_ms"], 2000);
     }
 }
