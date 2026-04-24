@@ -10,8 +10,14 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "format": "prettier --check --write .",
-    "postinstall": "is-ci || lefthook install"
+    "cargo:build": "cargo build --workspace",
+    "cargo:check": "cargo check --workspace",
+    "cargo:clippy": "cargo clippy --workspace -- -D warnings",
+    "cargo:fmt": "cargo fmt",
+    "cargo:run": "cargo run",
+    "cargo:test": "cargo test --workspace",
+    "postinstall": "is-ci || lefthook install",
+    "prettier": "prettier --check --write ."
   },
   "devDependencies": {
     "@commitlint/cli": "20.5.0",

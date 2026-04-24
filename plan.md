@@ -70,9 +70,10 @@ Implement a secure, automated build process for public distribution.
 2. **Toolchain:** Utilize `cross` (via Docker) to cross-compile for the `aarch64` target.
 3. **Optimization:** Implement `Swatinem/rust-cache` to mitigate long compilation times.
 4. **Release Assets:** Upon a new Git tag, the CI will create a GitHub Release containing:
-  - The compiled `power_controller` binary.
-  - The `setup-device.sh` script.
-  - The `install-app.sh` script.
+
+- The compiled `power_controller` binary.
+- The `setup-device.sh` script.
+- The `install-app.sh` script.
 
 ### Phase 5: Deployment Strategy (`scripts/install-app.sh`)
 
