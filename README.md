@@ -2,7 +2,7 @@
 
 # 🖲️ Panther Minor Controller
 
-### Remote controller for [Panther Minor](https://github.com/rozsival/panther-minor) AI workstation
+### Remote control for [Panther Minor](https://github.com/rozsival/panther-minor) AI workstation
 
 ![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20-0A84FF)
 ![Architecture](https://img.shields.io/badge/Architecture-ARM-E01F27)
