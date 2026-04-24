@@ -136,7 +136,13 @@ ufw allow "${PANTHER_SSH_PORT}/tcp" comment 'SSH'
 ufw --force enable
 log_success "UFW enabled. Open ports: SSH($PANTHER_SSH_PORT). All other traffic blocked."
 
-# ── Step 6: fail2ban ─────────────────────────────────────────────────────────
+# ── Step 6: GPIO group ───────────────────────────────────────────────────────
+log_info "Granting ${PANTHER_ALLOWED_USER} GPIO access..."
+groupadd -f gpio
+usermod -aG gpio "$PANTHER_ALLOWED_USER"
+log_success "${PANTHER_ALLOWED_USER} added to the gpio group."
+
+# ── Step 7: fail2ban ─────────────────────────────────────────────────────────
 log_info "Configuring fail2ban..."
 
 JAIL_LOCAL="/etc/fail2ban/jail.local"
@@ -155,7 +161,7 @@ systemctl enable --now fail2ban
 systemctl restart fail2ban
 log_success "fail2ban configured and running."
 
-# ── Step 7: Tailscale ────────────────────────────────────────────────────────
+# ── Step 8: Tailscale ────────────────────────────────────────────────────────
 log_info "Installing Tailscale..."
 curl -fsSL "https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg" |
   tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
@@ -171,7 +177,7 @@ else
   log_error "Tailscale installation failed."
 fi
 
-# ── Step 8: Shell + Starship ─────────────────────────────────────────────────
+# ── Step 9: Shell + Starship ─────────────────────────────────────────────────
 log_info "Setting up shell with Starship prompt for $PANTHER_ALLOWED_USER..."
 
 # Ensure home dir exists
