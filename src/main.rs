@@ -40,13 +40,13 @@ async fn main() -> Result<()> {
     };
 
     // Bind to localhost only — never accept remote connections
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     let listener = TcpListener::bind(addr)
         .await
         .map_err(|e| AppError::Http(format!("Failed to bind to {addr}: {e}")))?;
 
     println!("🖲️ Panther Minor Controller v{}", env!("CARGO_PKG_VERSION"));
-    println!("   Listening on http://127.0.0.1:8080 (localhost only)");
+    println!("   Listening on port {}", listener.local_addr()?.port());
     println!(
         "   GPIO Pin: {}",
         gpio_pin.unwrap_or(gpio::DEFAULT_GPIO_PIN)

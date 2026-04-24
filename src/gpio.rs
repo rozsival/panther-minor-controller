@@ -16,7 +16,7 @@ pub trait RelayTrait: Send + Sync {
 }
 
 /// Relay control abstraction.
-/// The relay is active-high: setting the pin HIGH closes the relay (shorts the PWR pins).
+/// The relay is active-low: setting the pin LOW closes the relay (shorts the PWR pins).
 #[cfg(target_os = "linux")]
 pub struct Relay {
     pin: Option<rppal::gpio::OutputPin>,
@@ -82,14 +82,14 @@ impl Relay {
 
     async fn activate(&mut self) -> Result<()> {
         if let Some(ref mut pin) = self.pin {
-            pin.set_high();
+            pin.set_low();
         }
         Ok(())
     }
 
     async fn deactivate(&mut self) -> Result<()> {
         if let Some(ref mut pin) = self.pin {
-            pin.set_low();
+            pin.set_high();
         }
         Ok(())
     }
