@@ -39,13 +39,14 @@ async fn main() -> Result<()> {
         relay: Arc::new(Mutex::new(relay)),
     };
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    // Bind to localhost only — never accept remote connections
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     let listener = TcpListener::bind(addr)
         .await
         .map_err(|e| AppError::Http(format!("Failed to bind to {addr}: {e}")))?;
 
     println!("🖲️ Panther Minor Controller v{}", env!("CARGO_PKG_VERSION"));
-    println!("   Listening on http://{addr}");
+    println!("   Listening on http://127.0.0.1:8080 (localhost only)");
     println!(
         "   GPIO Pin: {}",
         gpio_pin.unwrap_or(gpio::DEFAULT_GPIO_PIN)
