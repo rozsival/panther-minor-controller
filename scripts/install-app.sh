@@ -34,8 +34,8 @@ log_success "Binary installed to ${INSTALL_DIR}/bin/panther-minor-controller."
 log_info "Configuring environment variables..."
 cat >"$ENV_FILE" <<EOF
 # Panther Minor Controller environment
-PANTHER_MINOR_CONTROLLER_GPIO_PIN=17
-PANTHER_MINOR_CONTROLLER_PORT=8080
+GPIO_PIN=17
+PORT=8080
 EOF
 
 chmod 600 "$ENV_FILE"

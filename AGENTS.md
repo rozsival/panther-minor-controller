@@ -31,7 +31,7 @@ src/
 - `RelayTrait` (async trait): real on Linux (`rppal`), stub on macOS (prints actions), mock in tests.
 - `AppState` = `relay` + `power_on` state + `poll_ms`, injected into handlers.
 - Binds `0.0.0.0:8080`, accessible only via Tailscale.
-- GPIO pin via `PANTHER_MINOR_CONTROLLER_GPIO_PIN` env (default: BCM 17).
+- GPIO pin via `GPIO_PIN` env (default: BCM 17).
 - Power-on state tracked internally; guards prevent duplicate actions.
 
 ## API
@@ -81,9 +81,9 @@ src/{main, gpio, html, error}.rs
 
 ## Env
 
-- `PANTHER_MINOR_CONTROLLER_GPIO_PIN` — BCM pin (default: 17)
-- `PANTHER_MINOR_CONTROLLER_PORT` — HTTP port (default: 8080)
-- `PANTHER_MINOR_CONTROLLER_STATUS_POLL_MS` — Status polling interval (default: 2000)
+- `GPIO_PIN` — BCM pin (default: 17)
+- `PORT` — HTTP port (default: 8080)
+- `STATUS_POLL_MS` — Status polling interval (default: 2000)
 
 ## Release
 

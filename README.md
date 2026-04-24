@@ -55,7 +55,7 @@ Connect the relay module to the Raspberry Pi GPIO as follows:
 
 > [!NOTE]
 > The relay is **active-low**: setting the GPIO pin LOW closes the relay (shorts the PWR pins). The default GPIO pin
-> is **BCM 17**. Change it via the `PANTHER_MINOR_CONTROLLER_GPIO_PIN` environment variable.
+> is **BCM 17**. Change it via the `GPIO_PIN` environment variable.
 
 ### Software
 
@@ -191,11 +191,11 @@ sudo systemctl enable panther-minor-controller
 
 Env vars are set in `/opt/panther-minor-controller/env` and loaded by the `systemd` service.
 
-| Variable                                  | Description                | Default |
-| ----------------------------------------- | -------------------------- | ------- |
-| `PANTHER_MINOR_CONTROLLER_GPIO_PIN`       | BCM GPIO pin for the relay | `17`    |
-| `PANTHER_MINOR_CONTROLLER_PORT`           | HTTP server port           | `8080`  |
-| `PANTHER_MINOR_CONTROLLER_STATUS_POLL_MS` | Status polling interval    | `2000`  |
+| Variable         | Description                | Default |
+| ---------------- | -------------------------- | ------- |
+| `GPIO_PIN`       | BCM GPIO pin for the relay | `17`    |
+| `PORT`           | HTTP server port           | `8080`  |
+| `STATUS_POLL_MS` | Status polling interval    | `2000`  |
 
 ---
 

@@ -33,20 +33,18 @@ struct AppState {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Parse GPIO pin from environment or use default
-    let gpio_pin: Option<u8> = std::env::var("PANTHER_MINOR_CONTROLLER_GPIO_PIN")
-        .ok()
-        .and_then(|v| v.parse().ok());
+    let gpio_pin: Option<u8> = std::env::var("GPIO_PIN").ok().and_then(|v| v.parse().ok());
 
     let relay = Relay::new(gpio_pin)?;
 
     // Parse port from environment (default: 8080).
-    let port: u16 = std::env::var("PANTHER_MINOR_CONTROLLER_PORT")
+    let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(8080);
 
     // Parse status poll interval from environment (default: 2000ms).
-    let poll_ms: u64 = std::env::var("PANTHER_MINOR_CONTROLLER_STATUS_POLL_MS")
+    let poll_ms: u64 = std::env::var("STATUS_POLL_MS")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(2000);
