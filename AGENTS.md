@@ -29,8 +29,8 @@ src/
 ```
 
 - `RelayTrait` (async trait): real on Linux (`rppal`), stub on macOS (prints actions), mock in tests.
-- `AppState` = `relay` + `token` + `power_on` state + `poll_ms`, injected into handlers.
-- Binds `0.0.0.0:8080`, accessible only via Tailscale and with `PANTHER_MINOR_CONTROLLER_TOKEN` auth.
+- `AppState` = `relay` + `power_on` state + `poll_ms`, injected into handlers.
+- Binds `0.0.0.0:8080`, accessible only via Tailscale.
 - GPIO pin via `PANTHER_MINOR_CONTROLLER_GPIO_PIN` env (default: BCM 17).
 - Power-on state tracked internally; guards prevent duplicate actions.
 
@@ -47,7 +47,6 @@ src/
 | POST   | `/api/reset`     | Hard reset   | 5s off, 2s pause, 0.5s on                  |
 
 - API responses are JSON. Unknown paths → 404 JSON.
-- Auth: `Authorization: Bearer <token>` or plain `<token>` header required for `/api/*` endpoints. Dashboard (`/`) is public.
 - Idempotency: power-on, power-off, shutdown, and reset reject calls when the device is already in the target state (400 error).
 
 ## Testing
@@ -62,28 +61,28 @@ cargo test power_on    # Filter by name
 ## Files
 
 ```text
-Cargo.{toml,lock}
-src/{main, gpio, html, error}.rs
-scripts/
+.editorconfig
+.gitattributes
 .github/workflows/{ci,release}.yml
+.prettierignore
+API.md
+Cargo.{toml,lock}
+commitlint.config.js
+lefthook.yml
 package.json
 pnpm-lock.yaml
 pnpm-workspace.yaml
-lefthook.yml
-renovate.json
-commitlint.config.js
 prettier.config.js
-.prettierignore
-.editorconfig
-.gitattributes
 README.md
+renovate.json
+scripts/
+src/{main, gpio, html, error}.rs
 ```
 
 ## Env
 
 - `PANTHER_MINOR_CONTROLLER_GPIO_PIN` — BCM pin (default: 17)
 - `PANTHER_MINOR_CONTROLLER_PORT` — HTTP port (default: 8080)
-- `PANTHER_MINOR_CONTROLLER_TOKEN` — Auth token (required)
 - `PANTHER_MINOR_CONTROLLER_STATUS_POLL_MS` — Status polling interval (default: 2000)
 
 ## Release

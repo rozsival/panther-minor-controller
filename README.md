@@ -2,16 +2,215 @@
 
 # 🖲️ Panther Minor Controller
 
-### Remote controller for [Panther Minor](https://github.com/rozsival/panther-minor.git) AI workstation
+### Remote power controller for [Panther Minor](https://github.com/rozsival/panther-minor) AI workstation
 
 ![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20-0A84FF)
 ![Architecture](https://img.shields.io/badge/Architecture-ARM-E01F27)
 
-Remote controller for [Panther Minor](https://github.com/rozsival/panther-minor.git) AI workstation, running
-on a **Raspberry Pi Zero 2 W**. It provides a web interface to **power up**, **power down** and **reset** the workstation remotely, as well as a **status indicator** showing whether the workstation is online or offline.
+Remote controller for [Panther Minor](https://github.com/rozsival/panther-minor) AI workstation, running on a
+**Raspberry Pi Zero 2 W**. It provides a web interface and API to **power up**, **power down**, **force shutdown**, and
+**hard reset** the workstation remotely, with real-time status tracking and confirmation.
 
 </div>
 
 ---
 
-🚧 Work In Progress 🚧
+## ✨ Features
+
+| Feature                  | What it gives you                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| **Web dashboard**        | Clean, responsive interface with real-time status, action buttons, and confirmation flow  |
+| **REST API**             | Full programmatic control — integrate with scripts, automation, or other tools            |
+| **Status tracking**      | Internal power-state tracking with `/api/health` and `/api/status` endpoints              |
+| **Action confirmation**  | Dashboard polls status after each action to confirm the device reached the expected state |
+| **Secure remote access** | Tailscale-only access, hardened SSH, firewall, and fail2ban                               |
+| **Zero-touch install**   | One script to prepare the Raspberry Pi, another to install and daemonize the controller   |
+
+---
+
+## 🧰 Prerequisites
+
+### Hardware
+
+| Component    | Recommendation                                  |
+| ------------ | ----------------------------------------------- |
+| Board        | **Raspberry Pi Zero 2 W**                       |
+| Power supply | Official Pi Zero USB PSU                        |
+| MicroSD card | 16 GB or more, Class 10 or U1                   |
+| Relay module | 5V single-channel relay module with octocoupler |
+| Wiring       | Jumper wires (female-to-female)                 |
+
+### Wiring
+
+Connect the relay module to the Raspberry Pi GPIO as follows:
+
+| Relay Pin | Pi Pin (BCM)       | Purpose                            |
+| --------- | ------------------ | ---------------------------------- |
+| VCC       | 5V (Pin 2)         | Power                              |
+| GND       | GND (Pin 6)        | Ground                             |
+| IN1       | BCM 17 (Pin 11)    | Signal (configurable via env)      |
+| NC        | —                  | Not used                           |
+| COM       | Panther Minor PWR+ | Connects to power button           |
+| NO        | Panther Minor PWR- | Bridges PWR pins when relay closes |
+
+> [!NOTE]
+> The relay is **active-low**: setting the GPIO pin LOW closes the relay (shorts the PWR pins). The default GPIO pin
+> is **BCM 17**. Change it via the `PANTHER_MINOR_CONTROLLER_GPIO_PIN` environment variable.
+
+### Software
+
+- 🍇 [Raspberry Pi OS Lite](https://www.raspberrypi.com/software/operating-systems/) (64-bit, minimal image)
+- SD card flashed via [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+- SSH enabled with key auth during flashing
+- Wi-Fi configured during flashing
+- A [Tailscale](https://tailscale.com/) account for secure remote access
+
+---
+
+## 🚀 Quick Start
+
+### 1. Set up the Raspberry Pi
+
+SSH into your Raspberry Pi and run the device setup script to configure the system, harden SSH, set up the firewall,
+and install Tailscale:
+
+> [!WARNING]
+> SSH will be available on **port 2222** with **key-based authentication only**.
+>
+> Reconnect with: `ssh -p 2222 <user>@<pizero-ip>`
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/main/scripts/setup-device.sh | sudo bash
+```
+
+> [!NOTE]
+> The script is interactive — it will prompt for server name, allowed user, SSH port, and timezone.
+> Default values are suggested for each.
+
+### 2. Install the controller
+
+After the device setup completes, install the controller binary as a systemd service:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/main/scripts/install-app.sh | sudo bash
+```
+
+> [!TIP]
+> Customize GPIO_PIN and PORT in `/opt/panther-minor-controller/env` as needed.
+
+### 3. Connect Tailscale
+
+After the initial setup authenticate the server to your
+[Tailscale network](https://login.tailscale.com/admin/):
+
+```bash
+sudo tailscale up
+```
+
+Follow the browser link to authenticate. Once connected, access the dashboard via the Pi's Tailscale IP or hostname:
+
+```text
+http://<pizero-hostname>:8080
+```
+
+SSH access is also possible through Tailscale hostname:
+
+```bash
+ssh -p 2222 <user>@<pizero-hostname>
+```
+
+> [!TIP]
+> It is usually best to
+> [disable key expiry](https://login.tailscale.com/admin/machines)
+> for the Pi in Tailscale to avoid losing access.
+
+---
+
+## ⚙️ What the setup scripts configure
+
+### `setup-device.sh`
+
+Prepares the Raspberry Pi with:
+
+- **Timezone** — sets the system timezone
+- **Essential packages** — core packages with unattended upgrades enabled
+- **SSH hardening** — custom port, key-only auth, disabled root login, restricted users
+- **UFW** — firewall with only allowed SSH port open
+- **GPIO group** — grants the allowed user access to GPIO pins
+- **fail2ban** — brute-force protection
+- **Tailscale** — Tailscale agent installation
+- **Shell** — modern shell prompt for the current user
+
+### `install-app.sh`
+
+Installs the controller as a managed service:
+
+- Downloads the latest binary from GitHub Releases
+- Creates an environment file at `/opt/panther-minor-controller/env`
+- Installs a systemd service (`panther-minor-controller.service`) that starts after Tailscale
+- Enables auto-restart on failure
+
+---
+
+## 🖥️ Dashboard
+
+The web dashboard provides a clean interface with four action buttons:
+
+| Button        | Action                | Relay Behavior              |
+| ------------- | --------------------- | --------------------------- |
+| 🟢 Power On   | Start the workstation | Short press 0.5s            |
+| 💤 Power Off  | Graceful shutdown     | Short press 0.5s (ACPI)     |
+| 🔴 Shutdown   | Force shutdown        | Long press 5s               |
+| 🔄 Hard Reset | Power cycle           | 5s off → 2s pause → 0.5s on |
+
+The dashboard tracks real-time status, disables buttons when actions are in progress, and polls the device state after
+each action to confirm it reached the expected state.
+
+---
+
+## 🔧 Service management
+
+```bash
+# Check status
+systemctl status panther-minor-controller
+
+# View logs
+journalctl -u panther-minor-controller -f
+
+# Restart
+sudo systemctl restart panther-minor-controller
+
+# Stop
+sudo systemctl stop panther-minor-controller
+
+# Enable on boot (default)
+sudo systemctl enable panther-minor-controller
+```
+
+### Environment variables
+
+Env vars are set in `/opt/panther-minor-controller/env` and loaded by the `systemd` service.
+
+| Variable                                  | Description                | Default |
+| ----------------------------------------- | -------------------------- | ------- |
+| `PANTHER_MINOR_CONTROLLER_GPIO_PIN`       | BCM GPIO pin for the relay | `17`    |
+| `PANTHER_MINOR_CONTROLLER_PORT`           | HTTP server port           | `8080`  |
+| `PANTHER_MINOR_CONTROLLER_STATUS_POLL_MS` | Status polling interval    | `2000`  |
+
+---
+
+## 🛡️ Security
+
+The controller is designed with a defense-in-depth approach:
+
+- **Tailscale only** — the server binds to `0.0.0.0` but is only reachable through your Tailscale network
+- **Hardened SSH** — custom port, key-only authentication, no root login
+- **UFW firewall** — only SSH port is open; all other inbound traffic is denied
+- **fail2ban** — protects against SSH brute-force attempts
+
+---
+
+## 📚 More documentation
+
+- [API Reference](API.md) — details of the REST API endpoints and expected responses
+- [Panther Minor](https://github.com/rozsival/panther-minor) — the AI workstation this controller manages

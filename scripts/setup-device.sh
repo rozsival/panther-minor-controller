@@ -54,12 +54,12 @@ log_info "Updating system and installing essential packages..."
 apt update -y
 apt upgrade -y
 apt install -y \
-  build-essential \
   fail2ban \
   htop \
   jq \
   starship \
   tree \
+  tmux \
   ufw \
   unattended-upgrades
 

@@ -23,17 +23,11 @@ log_error() {
 
 # ── Step 1: Download binary ──────────────────────────────────────────────────
 log_info "Downloading panther-minor-controller binary..."
+
 mkdir -p "${INSTALL_DIR}/bin"
-
-if command -v curl >/dev/null 2>&1; then
-  curl -fsSL "$BIN_URL" -o "${INSTALL_DIR}/bin/panther-minor-controller"
-elif command -v wget >/dev/null 2>&1; then
-  wget -q "$BIN_URL" -O "${INSTALL_DIR}/bin/panther-minor-controller"
-else
-  log_error "Neither curl nor wget is available."
-fi
-
+curl -fsSL "$BIN_URL" -o "${INSTALL_DIR}/bin/panther-minor-controller"
 chmod +x "${INSTALL_DIR}/bin/panther-minor-controller"
+
 log_success "Binary installed to ${INSTALL_DIR}/bin/panther-minor-controller."
 
 # ── Step 2: Environment variables ─────────────────────────────────────────────
@@ -42,7 +36,6 @@ cat >"$ENV_FILE" <<EOF
 # Panther Minor Controller environment
 PANTHER_MINOR_CONTROLLER_GPIO_PIN=17
 PANTHER_MINOR_CONTROLLER_PORT=8080
-PANTHER_MINOR_CONTROLLER_TOKEN=
 EOF
 
 chmod 600 "$ENV_FILE"
@@ -85,7 +78,6 @@ printf "\033[0;32m║  Unit     : %-27s║\033[0m\n" "$SYSTEMD_UNIT"
 echo -e "\033[0;32m╚═══════════════════════════════════════════╝\033[0m"
 echo ""
 
-log_warn "⚠  Set PANTHER_MINOR_CONTROLLER_TOKEN in $ENV_FILE before use."
 log_warn "⚠  Review and customize GPIO_PIN and PORT as needed."
 echo ""
 

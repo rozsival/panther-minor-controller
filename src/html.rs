@@ -1,7 +1,5 @@
 /// Dashboard HTML page.
-///
-/// `token` — API authorization token. If empty, no auth header is sent.
-pub fn dashboard_html(version: &str, token: &str) -> String {
+pub fn dashboard_html(version: &str) -> String {
     // language=html
     r#"<!DOCTYPE html>
 <html lang="en">
@@ -264,7 +262,6 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
     <div class="footer">panther-minor-controller vVERSION</div>
 
     <script>
-        const API_TOKEN = 'API_TOKEN_VALUE';
         const dot = document.getElementById('status-dot');
         const text = document.getElementById('status-text');
         const logEl = document.getElementById('log');
@@ -301,9 +298,7 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
                 try {
-                    const resp = await fetch('/api/status', {
-                        headers: API_TOKEN ? { 'Authorization': 'Bearer ' + API_TOKEN } : {},
-                    });
+                    const resp = await fetch('/api/status');
                     const data = await resp.json();
                     if (data.power_on === expectedPowerOn) {
                         return true;
@@ -356,7 +351,6 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
             try {
                 const resp = await fetch('/api/' + action, {
                     method: 'POST',
-                    headers: API_TOKEN ? { 'Authorization': 'Bearer ' + API_TOKEN } : {},
                 });
                 const data = await resp.json();
                 if (resp.ok) {
@@ -396,9 +390,7 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
         // Fetch initial state on page load
         (async () => {
             try {
-                const resp = await fetch('/api/health', {
-                    headers: API_TOKEN ? { 'Authorization': 'Bearer ' + API_TOKEN } : {},
-                });
+                const resp = await fetch('/api/health');
                 const data = await resp.json();
                 if (resp.ok) {
                     if (data.power_on) {
@@ -417,8 +409,4 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
 </body>
 </html>"#
         .replace("vVERSION", version)
-        .replace(
-            "API_TOKEN_VALUE",
-            &token.replace('\\', "\\\\").replace('\'', "\\'"),
-        )
 }

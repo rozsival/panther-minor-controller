@@ -24,8 +24,6 @@ use tokio::sync::Mutex;
 #[derive(Clone)]
 struct AppState {
     relay: Arc<Mutex<dyn RelayTrait>>,
-    /// API token for authorization (empty string = no auth required).
-    token: String,
     /// Whether the device is currently powered on.
     power_on: std::sync::Arc<std::sync::RwLock<bool>>,
     /// Status polling interval in milliseconds (default: 2000).
@@ -41,13 +39,6 @@ async fn main() -> Result<()> {
 
     let relay = Relay::new(gpio_pin)?;
 
-    // Parse API token from environment (required).
-    let token = std::env::var("PANTHER_MINOR_CONTROLLER_TOKEN").map_err(|_| {
-        AppError::Http(
-            "PANTHER_MINOR_CONTROLLER_TOKEN environment variable is required".to_string(),
-        )
-    })?;
-
     // Parse port from environment (default: 8080).
     let port: u16 = std::env::var("PANTHER_MINOR_CONTROLLER_PORT")
         .ok()
@@ -62,7 +53,6 @@ async fn main() -> Result<()> {
 
     let state = AppState {
         relay: Arc::new(Mutex::new(relay)),
-        token,
         power_on: Arc::new(std::sync::RwLock::new(false)),
         poll_ms,
     };
@@ -125,26 +115,6 @@ where
     let method = req.method().clone();
     let path = req.uri().path().to_string();
 
-    // Auth check: API endpoints require a valid token (if one is configured).
-    if path.starts_with("/api/") && !state.token.is_empty() {
-        let auth_header = req
-            .headers()
-            .get(header::AUTHORIZATION)
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("");
-        // Accept both "Bearer <token>" and direct "<token>" formats.
-        let provided = auth_header.strip_prefix("Bearer ").unwrap_or(auth_header);
-        if provided != state.token {
-            return Ok(json_response(
-                StatusCode::UNAUTHORIZED,
-                &serde_json::json!({
-                    "error": "Unauthorized",
-                    "message": "Missing or invalid API token"
-                }),
-            ));
-        }
-    }
-
     // Only allow POST for API endpoints, GET for dashboard
     match (method.as_str(), path.as_str()) {
         ("GET", "/api/health") => {
@@ -175,7 +145,7 @@ where
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
             .body(
-                dashboard_html(env!("CARGO_PKG_VERSION"), &state.token)
+                dashboard_html(env!("CARGO_PKG_VERSION"))
                     .into_bytes()
                     .into(),
             )
@@ -318,20 +288,6 @@ mod tests {
             .unwrap()
     }
 
-    /// Helper: build a request with an API token header.
-    fn request_with_auth(
-        method: &str,
-        path: &str,
-        token: &str,
-    ) -> Request<http_body_util::Full<Bytes>> {
-        Request::builder()
-            .method(method)
-            .uri(path)
-            .header("Authorization", format!("Bearer {token}"))
-            .body(Full::new(Bytes::new()))
-            .unwrap()
-    }
-
     /// Helper: extract JSON body from response (async).
     async fn body_json(resp: Response<Full<Bytes>>) -> serde_json::Value {
         let bytes = resp.into_body().collect().await.unwrap().to_bytes();
@@ -343,8 +299,6 @@ mod tests {
         relay: Arc<Mutex<dyn RelayTrait>>,
         /// Shared call counter — accessible without holding the relay lock.
         calls: std::sync::Arc<std::sync::Mutex<std::collections::HashMap<String, usize>>>,
-        /// API token (empty = no auth).
-        token: String,
         /// Whether the device is powered on.
         power_on: Arc<std::sync::RwLock<bool>>,
         /// Status polling interval in ms.
@@ -358,20 +312,6 @@ mod tests {
             Self {
                 relay: Arc::new(Mutex::new(mock)),
                 calls,
-                token: String::new(), // no auth by default
-                power_on: Arc::new(std::sync::RwLock::new(false)),
-                poll_ms: 2000,
-            }
-        }
-
-        /// Create a test state with auth enabled.
-        fn with_auth(token: &str) -> Self {
-            let mock = MockRelay::new();
-            let calls = mock.calls.clone();
-            Self {
-                relay: Arc::new(Mutex::new(mock)),
-                calls,
-                token: token.to_string(),
                 power_on: Arc::new(std::sync::RwLock::new(false)),
                 poll_ms: 2000,
             }
@@ -380,7 +320,6 @@ mod tests {
         fn app_state(&self) -> AppState {
             AppState {
                 relay: self.relay.clone(),
-                token: self.token.clone(),
                 power_on: self.power_on.clone(),
                 poll_ms: self.poll_ms,
             }
@@ -834,105 +773,6 @@ mod tests {
         assert_eq!(relay.call_count("nonexistent"), 0);
     }
 
-    // ── Authorization (when token is set) ────────────────────────────
-
-    #[tokio::test]
-    async fn api_without_token_returns_401() {
-        let state = TestState::with_auth("secret");
-        let resp = handle_request(request("POST", "/api/power-on"), state.app_state())
-            .await
-            .unwrap();
-        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-    }
-
-    #[tokio::test]
-    async fn api_with_wrong_token_returns_401() {
-        let state = TestState::with_auth("secret");
-        let resp = handle_request(
-            request_with_auth("POST", "/api/power-on", "wrong"),
-            state.app_state(),
-        )
-        .await
-        .unwrap();
-        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-    }
-
-    #[tokio::test]
-    async fn api_with_correct_token_succeeds() {
-        let state = TestState::with_auth("secret");
-        assert_eq!(state.call_count("short_press"), 0);
-
-        let resp = handle_request(
-            request_with_auth("POST", "/api/power-on", "secret"),
-            state.app_state(),
-        )
-        .await
-        .unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
-        assert_eq!(state.call_count("short_press"), 1);
-    }
-
-    #[tokio::test]
-    async fn api_without_token_header_returns_401() {
-        let state = TestState::with_auth("secret");
-        let resp = handle_request(
-            Request::builder()
-                .method("POST")
-                .uri("/api/power-on")
-                .body(Full::new(Bytes::new()))
-                .unwrap(),
-            state.app_state(),
-        )
-        .await
-        .unwrap();
-        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-    }
-
-    #[tokio::test]
-    async fn health_without_token_returns_401_when_auth_enabled() {
-        let state = TestState::with_auth("secret");
-        let resp = handle_request(request("GET", "/api/health"), state.app_state())
-            .await
-            .unwrap();
-        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-    }
-
-    #[tokio::test]
-    async fn dashboard_accessible_without_token() {
-        let state = TestState::with_auth("secret");
-        let resp = handle_request(request("GET", "/"), state.app_state())
-            .await
-            .unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn bearer_prefix_accepted() {
-        let state = TestState::with_auth("secret");
-        handle_request(
-            request_with_auth("POST", "/api/power-on", "secret"),
-            state.app_state(),
-        )
-        .await
-        .unwrap();
-        let resp = handle_request(
-            request_with_auth("POST", "/api/reset", "secret"),
-            state.app_state(),
-        )
-        .await
-        .unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn no_auth_when_token_is_empty() {
-        let state = test_state(); // token = ""
-        let resp = handle_request(request("POST", "/api/power-on"), state.app_state())
-            .await
-            .unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
-    }
-
     // ── Status endpoint ──────────────────────────────────────────────
 
     #[tokio::test]
@@ -975,27 +815,6 @@ mod tests {
             .unwrap();
         let json = body_json(resp).await;
         assert_eq!(json["poll_ms"], 2000);
-    }
-
-    #[tokio::test]
-    async fn status_requires_auth_when_token_set() {
-        let state = TestState::with_auth("secret");
-        let resp = handle_request(request("GET", "/api/status"), state.app_state())
-            .await
-            .unwrap();
-        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-    }
-
-    #[tokio::test]
-    async fn status_accessible_with_correct_auth() {
-        let state = TestState::with_auth("secret");
-        let resp = handle_request(
-            request_with_auth("GET", "/api/status", "secret"),
-            state.app_state(),
-        )
-        .await
-        .unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
     }
 
     #[tokio::test]
