@@ -28,8 +28,8 @@ src/
 
 - `RelayTrait` (async trait): real on Linux, stub on macOS, mock in tests.
 - `AppState` = `Arc<Mutex<dyn RelayTrait>>`, injected into handlers.
-- Binds `127.0.0.1:8080` only — no remote access.
-- GPIO pin via `POWER_CONTROLLER_GPIO_PIN` env (default: BCM 17).
+- Binds `0.0.0.0:8080`, accessible only via Tailscale and with `PANTHER_MINOR_CONTROLLER_TOKEN` auth.
+- GPIO pin via `PANTHER_MINOR_CONTROLLER_GPIO_PIN` env (default: BCM 17).
 
 ## API
 
@@ -65,7 +65,9 @@ README.md
 
 ## Env
 
-`POWER_CONTROLLER_GPIO_PIN` — BCM pin (default: 17)
+- `PANTHER_MINOR_CONTROLLER_GPIO_PIN` — BCM pin (default: 17)
+- `PANTHER_MINOR_CONTROLLER_PORT` — HTTP port (default: 8080)
+- `PANTHER_MINOR_CONTROLLER_TOKEN` — Auth token (required)
 
 ## Release
 

@@ -14,7 +14,7 @@
     "cargo:check": "cargo check --workspace",
     "cargo:clippy": "cargo clippy --workspace -- -D warnings",
     "cargo:fmt": "cargo fmt",
-    "cargo:run": "cargo run",
+    "cargo:run": "PANTHER_MINOR_CONTROLLER_TOKEN=\"$(openssl rand -hex 24)\" cargo run",
     "cargo:test": "cargo test --workspace",
     "postinstall": "is-ci || lefthook install",
     "prettier": "prettier --check --write ."

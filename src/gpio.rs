@@ -4,7 +4,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 /// Relay pin configuration.
-/// Default: BCM GPIO 17. Configure via POWER_CONTROLLER_GPIO_PIN env var.
+/// Default: BCM GPIO 17. Configure via PANTHER_MINOR_CONTROLLER_GPIO_PIN env var.
 pub const DEFAULT_GPIO_PIN: u8 = 17;
 
 /// Trait abstracting relay operations for testability.
@@ -132,7 +132,7 @@ impl Relay {
     pub fn new(_pin_number: Option<u8>) -> Result<Self> {
         println!("⚠  Running in SIMULATION mode (no GPIO control available on this platform).");
         println!(
-            "   Set POWER_CONTROLLER_GPIO_PIN to a valid BCM pin on Linux to enable hardware."
+            "   Set PANTHER_MINOR_CONTROLLER_GPIO_PIN to a valid BCM pin on Linux to enable hardware."
         );
         Ok(Self)
     }

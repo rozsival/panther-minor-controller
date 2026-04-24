@@ -1,5 +1,7 @@
 /// Dashboard HTML page.
-pub fn dashboard_html(version: &str) -> String {
+///
+/// `token` — API authorization token. If empty, no auth header is sent.
+pub fn dashboard_html(version: &str, token: &str) -> String {
     // language=html
     r#"<!DOCTYPE html>
 <html lang="en">
@@ -254,6 +256,7 @@ pub fn dashboard_html(version: &str) -> String {
     <div class="footer">panther-minor-controller vVERSION</div>
 
     <script>
+        const API_TOKEN = 'API_TOKEN_VALUE';
         const dot = document.getElementById('status-dot');
         const text = document.getElementById('status-text');
         const logEl = document.getElementById('log');
@@ -287,7 +290,10 @@ pub fn dashboard_html(version: &str) -> String {
         async function sendAction(action) {
             setBusy();
             try {
-                const resp = await fetch('/api/' + action, { method: 'POST' });
+                const resp = await fetch('/api/' + action, {
+                    method: 'POST',
+                    headers: API_TOKEN ? { 'Authorization': 'Bearer ' + API_TOKEN } : {},
+                });
                 const data = await resp.json();
                 if (resp.ok) {
                     logEl.innerHTML = '<span class="msg success">' + data.message + '</span>';
@@ -298,10 +304,14 @@ pub fn dashboard_html(version: &str) -> String {
             } catch (err) {
                 setError('Connection failed');
             }
-            setTimeout(setReady, 5000);
+            setTimeout(setReady);
         }
     </script>
 </body>
 </html>"#
         .replace("vVERSION", version)
+        .replace(
+            "API_TOKEN_VALUE",
+            &token.replace('\\', "\\\\").replace('\'', "\\'"),
+        )
 }
