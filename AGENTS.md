@@ -14,7 +14,6 @@ cargo test --workspace                  # Run all tests
 cargo clippy --workspace -- -D warnings # Lint with Clippy
 cargo check --workspace                 # Check types without building
 cargo fmt                               # Format code with rustfmt
-
 ```
 
 ## Architecture
