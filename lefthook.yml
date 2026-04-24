@@ -6,6 +6,21 @@ commit-msg:
 pre-commit:
   parallel: true
   jobs:
+    - run: cargo fmt
+      glob:
+        - '**/*.rs'
+      stage_fixed: true
+
+    - run: cargo check --workspace
+      glob:
+        - '**/*.rs'
+      stage_fixed: true
+
+    - run: cargo clippy --workspace -- -D warnings
+      glob:
+        - '**/*.rs'
+      stage_fixed: true
+
     - run: pnpm prettier --write {staged_files}
       glob:
         - '**/*.md'
