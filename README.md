@@ -7,7 +7,7 @@
 ![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20-0A84FF)
 ![Architecture](https://img.shields.io/badge/Architecture-ARM-E01F27)
 
-Light-weight, secure, remote control for Panther Minor in a single binary that runs on a
+Light-weight secure remote control for Panther Minor in a single binary that runs on a
 **Raspberry Pi Zero 2 W**. It provides a web interface and API to **power up**, **power down**, **force shutdown**, and
 **hard reset** the workstation remotely, with real-time status tracking and confirmation.
 
