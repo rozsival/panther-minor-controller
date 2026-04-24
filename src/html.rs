@@ -25,10 +25,10 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
             --green-bg: rgba(34, 197, 94, 0.1);
             --red: #ef4444;
             --red-bg: rgba(239, 68, 68, 0.1);
-            --yellow: #eab308;
-            --yellow-bg: rgba(234, 179, 8, 0.1);
-            --blue: #3b82f6;
-            --blue-bg: rgba(59, 130, 246, 0.1);
+            --amber: #f59e0b;
+            --amber-bg: rgba(245, 158, 11, 0.1);
+            --cyan: #06b6d4;
+            --cyan-bg: rgba(6, 182, 212, 0.1);
             --radius: 12px;
         }
 
@@ -187,11 +187,14 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
         button.power-on { border-left: 2px solid var(--green); }
         button.power-on:hover { border-color: var(--green); }
 
-        button.power-off { border-left: 2px solid var(--red); }
-        button.power-off:hover { border-color: var(--red); }
+        button.power-off { border-left: 2px solid var(--cyan); }
+        button.power-off:hover { border-color: var(--cyan); }
 
-        button.reset { border-left: 2px solid var(--yellow); }
-        button.reset:hover { border-color: var(--yellow); }
+        button.shutdown { border-left: 2px solid var(--red); }
+        button.shutdown:hover { border-color: var(--red); }
+
+        button.reset { border-left: 2px solid var(--amber); }
+        button.reset:hover { border-color: var(--amber); }
 
         .log {
             background: var(--bg);
@@ -232,18 +235,23 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
         </div>
 
         <div class="actions">
-            <button class="power-on" onclick="sendAction('power-on')">
-                <span class="icon">⏻</span>
+            <button class="power-on" id="btn-power-on" onclick="sendAction('power-on')">
+                <span class="icon">🟢</span>
                 <span class="label">Power On</span>
                 <span class="duration">0.5s</span>
             </button>
-            <button class="power-off" onclick="sendAction('power-off')">
-                <span class="icon">⏻</span>
+            <button class="power-off" id="btn-power-off" onclick="sendAction('power-off')">
+                <span class="icon">💤</span>
                 <span class="label">Power Off</span>
+                <span class="duration">0.5s</span>
+            </button>
+            <button class="shutdown" id="btn-shutdown" onclick="sendAction('shutdown')">
+                <span class="icon">🔴</span>
+                <span class="label">Shutdown</span>
                 <span class="duration">5s</span>
             </button>
-            <button class="reset" onclick="sendAction('reset')">
-                <span class="icon">↺</span>
+            <button class="reset" id="btn-reset" onclick="sendAction('reset')">
+                <span class="icon">🔄</span>
                 <span class="label">Hard Reset</span>
                 <span class="duration">7s</span>
             </button>
@@ -260,34 +268,61 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
         const dot = document.getElementById('status-dot');
         const text = document.getElementById('status-text');
         const logEl = document.getElementById('log');
-        const buttons = document.querySelectorAll('button');
+        const btnPowerOn = document.getElementById('btn-power-on');
+        const btnPowerOff = document.getElementById('btn-power-off');
+        const btnShutdown = document.getElementById('btn-shutdown');
+        const btnReset = document.getElementById('btn-reset');
+        const allButtons = [btnPowerOn, btnPowerOff, btnShutdown, btnReset];
+
+        const confirmations = {
+            'power-off': 'Send graceful shutdown signal to the device?\n\nAll running processes will be stopped and the device will shut down safely.',
+            'shutdown': 'Force shutdown the device?\n\nThis will cut power immediately. Any unsaved data will be lost.',
+            'reset': 'Hard reset the device?\n\nThis will cut power for 5 seconds, wait 2 seconds, then power on again.',
+        };
 
         function setBusy() {
             dot.className = 'dot busy';
             text.textContent = 'Busy';
             logEl.innerHTML = '<span class="msg busy">Action in progress…</span>';
-            buttons.forEach(b => b.disabled = true);
+            allButtons.forEach(b => b.disabled = true);
         }
 
-        function setSuccess() {
+        function updateButtons(powerOn) {
+            btnPowerOn.disabled = powerOn;
+            btnPowerOff.disabled = !powerOn;
+            btnShutdown.disabled = !powerOn;
+            btnReset.disabled = !powerOn;
+        }
+
+        function setOnline(powerOn) {
             dot.className = 'dot success';
             text.textContent = 'Online';
-            buttons.forEach(b => b.disabled = false);
+            updateButtons(powerOn);
+        }
+
+        function setOffline() {
+            dot.className = 'dot idle';
+            text.textContent = 'Offline';
+            btnPowerOn.disabled = false;
+            btnPowerOff.disabled = true;
+            btnShutdown.disabled = true;
+            btnReset.disabled = true;
         }
 
         function setError(msg) {
             dot.className = 'dot idle';
             text.textContent = 'Offline';
             logEl.innerHTML = '<span class="msg error">' + msg + '</span>';
-            buttons.forEach(b => b.disabled = false);
-        }
-
-        function setReady() {
-            dot.className = 'dot success';
-            text.textContent = 'Online';
+            btnPowerOn.disabled = false;
+            btnPowerOff.disabled = true;
+            btnShutdown.disabled = true;
+            btnReset.disabled = true;
         }
 
         async function sendAction(action) {
+            const msg = confirmations[action];
+            if (msg && !confirm(msg)) return;
+
             setBusy();
             try {
                 const resp = await fetch('/api/' + action, {
@@ -297,15 +332,36 @@ pub fn dashboard_html(version: &str, token: &str) -> String {
                 const data = await resp.json();
                 if (resp.ok) {
                     logEl.innerHTML = '<span class="msg success">' + data.message + '</span>';
-                    setSuccess();
+                    const powerOn = action === 'power-on' || action === 'reset';
+
+                    if (powerOn) {
+                        setOnline(powerOn);
+                    } else {
+                        setOffline();
+                    }
                 } else {
-                    setError(data.error || 'Unknown error');
+                    logEl.innerHTML = '<span class="msg error">' + data.message + '</span>';
+                    updateButtons(btnPowerOn.disabled);
                 }
             } catch (err) {
                 setError('Connection failed');
             }
-            setTimeout(setReady);
         }
+
+        // Fetch initial state on page load
+        (async () => {
+            try {
+                const resp = await fetch('/api/health');
+                const data = await resp.json();
+                if (resp.ok) {
+                    setOnline(data.power_on);
+                } else {
+                    setOffline();
+                }
+            } catch {
+                setOffline();
+            }
+        })();
     </script>
 </body>
 </html>"#

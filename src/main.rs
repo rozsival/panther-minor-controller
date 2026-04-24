@@ -26,6 +26,8 @@ struct AppState {
     relay: Arc<Mutex<dyn RelayTrait>>,
     /// API token for authorization (empty string = no auth required).
     token: String,
+    /// Whether the device is currently powered on.
+    power_on: std::sync::Arc<std::sync::RwLock<bool>>,
 }
 
 #[tokio::main]
@@ -49,6 +51,7 @@ async fn main() -> Result<()> {
     let state = AppState {
         relay: Arc::new(Mutex::new(relay)),
         token,
+        power_on: Arc::new(std::sync::RwLock::new(false)),
     };
 
     // Bind to localhost only — never accept remote connections
@@ -131,13 +134,17 @@ where
 
     // Only allow POST for API endpoints, GET for dashboard
     match (method.as_str(), path.as_str()) {
-        ("GET", "/api/health") => Ok(json_response(
-            StatusCode::OK,
-            &serde_json::json!({
-                "status": "healthy",
-                "version": env!("CARGO_PKG_VERSION")
-            }),
-        )),
+        ("GET", "/api/health") => {
+            let power_on = *state.power_on.read().unwrap();
+            Ok(json_response(
+                StatusCode::OK,
+                &serde_json::json!({
+                    "status": "healthy",
+                    "version": env!("CARGO_PKG_VERSION"),
+                    "power_on": power_on
+                }),
+            ))
+        }
 
         ("GET", "/") => Ok(Response::builder()
             .status(StatusCode::OK)
@@ -150,8 +157,19 @@ where
             .unwrap()),
 
         ("POST", "/api/power-on") => {
+            // Guard: reject if already on
+            if *state.power_on.read().unwrap() {
+                return Ok(json_response(
+                    StatusCode::BAD_REQUEST,
+                    &serde_json::json!({
+                        "error": "Already on",
+                        "message": "Device is already powered on"
+                    }),
+                ));
+            }
             let mut relay = state.relay.lock().await;
             relay.short_press().await?;
+            *state.power_on.write().unwrap() = true;
             Ok(json_response(
                 StatusCode::OK,
                 &serde_json::json!({
@@ -163,21 +181,67 @@ where
         }
 
         ("POST", "/api/power-off") => {
+            // Guard: reject if already off
+            if !*state.power_on.read().unwrap() {
+                return Ok(json_response(
+                    StatusCode::BAD_REQUEST,
+                    &serde_json::json!({
+                        "error": "Already off",
+                        "message": "Device is already powered off"
+                    }),
+                ));
+            }
             let mut relay = state.relay.lock().await;
-            relay.long_press().await?;
+            relay.graceful_power_off().await?;
+            *state.power_on.write().unwrap() = false;
             Ok(json_response(
                 StatusCode::OK,
                 &serde_json::json!({
                     "status": "success",
                     "action": "power-off",
-                    "message": "Long press (5s) sent"
+                    "message": "Graceful shutdown signal sent (0.5s)"
+                }),
+            ))
+        }
+
+        ("POST", "/api/shutdown") => {
+            // Guard: reject if already off
+            if !*state.power_on.read().unwrap() {
+                return Ok(json_response(
+                    StatusCode::BAD_REQUEST,
+                    &serde_json::json!({
+                        "error": "Already off",
+                        "message": "Device is already powered off"
+                    }),
+                ));
+            }
+            let mut relay = state.relay.lock().await;
+            relay.long_press().await?;
+            *state.power_on.write().unwrap() = false;
+            Ok(json_response(
+                StatusCode::OK,
+                &serde_json::json!({
+                    "status": "success",
+                    "action": "shutdown",
+                    "message": "Force shutdown (5s) sent"
                 }),
             ))
         }
 
         ("POST", "/api/reset") => {
+            // Guard: reject if already off
+            if !*state.power_on.read().unwrap() {
+                return Ok(json_response(
+                    StatusCode::BAD_REQUEST,
+                    &serde_json::json!({
+                        "error": "Already off",
+                        "message": "Device is already powered off"
+                    }),
+                ));
+            }
             let mut relay = state.relay.lock().await;
             relay.hard_reset().await?;
+            *state.power_on.write().unwrap() = true;
             Ok(json_response(
                 StatusCode::OK,
                 &serde_json::json!({
@@ -252,6 +316,8 @@ mod tests {
         calls: std::sync::Arc<std::sync::Mutex<std::collections::HashMap<String, usize>>>,
         /// API token (empty = no auth).
         token: String,
+        /// Whether the device is powered on.
+        power_on: Arc<std::sync::RwLock<bool>>,
     }
 
     impl TestState {
@@ -262,6 +328,7 @@ mod tests {
                 relay: Arc::new(Mutex::new(mock)),
                 calls,
                 token: String::new(), // no auth by default
+                power_on: Arc::new(std::sync::RwLock::new(false)),
             }
         }
 
@@ -273,6 +340,7 @@ mod tests {
                 relay: Arc::new(Mutex::new(mock)),
                 calls,
                 token: token.to_string(),
+                power_on: Arc::new(std::sync::RwLock::new(false)),
             }
         }
 
@@ -280,6 +348,7 @@ mod tests {
             AppState {
                 relay: self.relay.clone(),
                 token: self.token.clone(),
+                power_on: self.power_on.clone(),
             }
         }
 
@@ -309,6 +378,21 @@ mod tests {
         let json = body_json(resp).await;
         assert_eq!(json["status"], "healthy");
         assert_eq!(json["version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(json["power_on"], false);
+    }
+
+    #[tokio::test]
+    async fn health_returns_power_on_true_after_power_on() {
+        let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+
+        let resp = handle_request(request("GET", "/api/health"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["power_on"], true);
     }
 
     // ── Dashboard (GET /) ────────────────────────────────────────────
@@ -383,11 +467,34 @@ mod tests {
         assert_eq!(json["message"], "Short press (0.5s) sent");
     }
 
+    #[tokio::test]
+    async fn power_on_when_already_on_returns_400() {
+        let state = test_state();
+        // First call succeeds
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(state.call_count("short_press"), 1);
+
+        // Second call is rejected
+        let resp = handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let json = body_json(resp).await;
+        assert_eq!(json["error"], "Already on");
+        // No additional relay call
+        assert_eq!(state.call_count("short_press"), 1);
+    }
+
     // ── Power Off ────────────────────────────────────────────────────
 
     #[tokio::test]
     async fn power_off_returns_200() {
         let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
         let resp = handle_request(request("POST", "/api/power-off"), state.app_state())
             .await
             .unwrap();
@@ -395,11 +502,70 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn power_off_calls_long_press() {
+    async fn power_off_calls_graceful_power_off() {
+        let state = test_state();
+        assert_eq!(state.call_count("graceful_power_off"), 0);
+
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        handle_request(request("POST", "/api/power-off"), state.app_state())
+            .await
+            .unwrap();
+
+        assert_eq!(state.call_count("graceful_power_off"), 1);
+    }
+
+    #[tokio::test]
+    async fn power_off_returns_correct_json() {
+        let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        let resp = handle_request(request("POST", "/api/power-off"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["status"], "success");
+        assert_eq!(json["action"], "power-off");
+        assert_eq!(json["message"], "Graceful shutdown signal sent (0.5s)");
+    }
+
+    #[tokio::test]
+    async fn power_off_when_already_off_returns_400() {
+        let state = test_state();
+        let resp = handle_request(request("POST", "/api/power-off"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let json = body_json(resp).await;
+        assert_eq!(json["error"], "Already off");
+        assert_eq!(state.call_count("graceful_power_off"), 0);
+    }
+
+    // ── Shutdown (force) ─────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn shutdown_returns_200() {
+        let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        let resp = handle_request(request("POST", "/api/shutdown"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn shutdown_calls_long_press() {
         let state = test_state();
         assert_eq!(state.call_count("long_press"), 0);
 
-        handle_request(request("POST", "/api/power-off"), state.app_state())
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        handle_request(request("POST", "/api/shutdown"), state.app_state())
             .await
             .unwrap();
 
@@ -407,15 +573,42 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn power_off_returns_correct_json() {
+    async fn shutdown_returns_correct_json() {
         let state = test_state();
-        let resp = handle_request(request("POST", "/api/power-off"), state.app_state())
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        let resp = handle_request(request("POST", "/api/shutdown"), state.app_state())
             .await
             .unwrap();
         let json = body_json(resp).await;
         assert_eq!(json["status"], "success");
-        assert_eq!(json["action"], "power-off");
-        assert_eq!(json["message"], "Long press (5s) sent");
+        assert_eq!(json["action"], "shutdown");
+        assert_eq!(json["message"], "Force shutdown (5s) sent");
+    }
+
+    #[tokio::test]
+    async fn shutdown_when_already_off_returns_400() {
+        let state = test_state();
+        let resp = handle_request(request("POST", "/api/shutdown"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let json = body_json(resp).await;
+        assert_eq!(json["error"], "Already off");
+        assert_eq!(state.call_count("long_press"), 0);
+    }
+
+    #[tokio::test]
+    async fn reset_when_already_off_returns_400() {
+        let state = test_state();
+        let resp = handle_request(request("POST", "/api/reset"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let json = body_json(resp).await;
+        assert_eq!(json["error"], "Already off");
+        assert_eq!(state.call_count("hard_reset"), 0);
     }
 
     // ── Reset ────────────────────────────────────────────────────────
@@ -423,6 +616,9 @@ mod tests {
     #[tokio::test]
     async fn reset_returns_200() {
         let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
         let resp = handle_request(request("POST", "/api/reset"), state.app_state())
             .await
             .unwrap();
@@ -434,6 +630,9 @@ mod tests {
         let state = test_state();
         assert_eq!(state.call_count("hard_reset"), 0);
 
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
         handle_request(request("POST", "/api/reset"), state.app_state())
             .await
             .unwrap();
@@ -444,6 +643,9 @@ mod tests {
     #[tokio::test]
     async fn reset_returns_correct_json() {
         let state = test_state();
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
         let resp = handle_request(request("POST", "/api/reset"), state.app_state())
             .await
             .unwrap();
@@ -489,14 +691,18 @@ mod tests {
     // ── Idempotency / Multiple calls ─────────────────────────────────
 
     #[tokio::test]
-    async fn multiple_power_on_calls_accumulate() {
+    async fn multiple_power_on_calls_guard_second_call() {
         let state = test_state();
-        for _ in 0..5 {
-            handle_request(request("POST", "/api/power-on"), state.app_state())
-                .await
-                .unwrap();
-        }
-        assert_eq!(state.call_count("short_press"), 5);
+        handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(state.call_count("short_press"), 1);
+
+        let resp = handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(state.call_count("short_press"), 1);
     }
 
     #[tokio::test]
@@ -514,9 +720,12 @@ mod tests {
         handle_request(request("POST", "/api/reset"), state.app_state())
             .await
             .unwrap();
+        handle_request(request("POST", "/api/power-off"), state.app_state())
+            .await
+            .unwrap();
 
         assert_eq!(state.call_count("short_press"), 2);
-        assert_eq!(state.call_count("long_press"), 1);
+        assert_eq!(state.call_count("graceful_power_off"), 2);
         assert_eq!(state.call_count("hard_reset"), 1);
     }
 
@@ -529,9 +738,10 @@ mod tests {
             "/api/health",
             "/api/power-on",
             "/api/power-off",
+            "/api/shutdown",
             "/api/reset",
         ];
-        let methods = ["GET", "POST", "POST", "POST"];
+        let methods = ["GET", "POST", "POST", "POST", "POST"];
 
         for (i, path) in endpoints.iter().enumerate() {
             let resp = handle_request(request(methods[i], path), state.app_state())
@@ -665,6 +875,12 @@ mod tests {
     #[tokio::test]
     async fn bearer_prefix_accepted() {
         let state = TestState::with_auth("secret");
+        handle_request(
+            request_with_auth("POST", "/api/power-on", "secret"),
+            state.app_state(),
+        )
+        .await
+        .unwrap();
         let resp = handle_request(
             request_with_auth("POST", "/api/reset", "secret"),
             state.app_state(),

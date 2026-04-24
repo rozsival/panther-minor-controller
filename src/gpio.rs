@@ -11,6 +11,7 @@ pub const DEFAULT_GPIO_PIN: u8 = 17;
 #[async_trait]
 pub trait RelayTrait: Send + Sync {
     async fn short_press(&mut self) -> Result<()>;
+    async fn graceful_power_off(&mut self) -> Result<()>;
     async fn long_press(&mut self) -> Result<()>;
     async fn hard_reset(&mut self) -> Result<()>;
 }
@@ -105,6 +106,11 @@ impl RelayTrait for Relay {
         Ok(())
     }
 
+    /// Graceful power off — short press to signal the OS (ACPI).
+    async fn graceful_power_off(&mut self) -> Result<()> {
+        self.short_press().await
+    }
+
     async fn long_press(&mut self) -> Result<()> {
         self.activate().await?;
         sleep(Duration::from_secs(5)).await;
@@ -147,6 +153,12 @@ impl RelayTrait for Relay {
         Ok(())
     }
 
+    async fn graceful_power_off(&mut self) -> Result<()> {
+        println!("  [SIM] Graceful power off (0.5s)");
+        sleep(Duration::from_millis(500)).await;
+        Ok(())
+    }
+
     async fn long_press(&mut self) -> Result<()> {
         println!("  [SIM] Long press (5s)");
         sleep(Duration::from_secs(5)).await;
@@ -169,6 +181,11 @@ impl RelayTrait for Relay {
 impl RelayTrait for MockRelay {
     async fn short_press(&mut self) -> Result<()> {
         self.record("short_press");
+        Ok(())
+    }
+
+    async fn graceful_power_off(&mut self) -> Result<()> {
+        self.record("graceful_power_off");
         Ok(())
     }
 
