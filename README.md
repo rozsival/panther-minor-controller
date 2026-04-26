@@ -115,6 +115,17 @@ curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/m
 > [!TIP]
 > Customize GPIO_PIN and PORT in `/opt/panther-minor-controller/env` as needed.
 
+### 2b. Update the controller
+
+To update to a newer release, run the update script (it stops the service, replaces the binary, then restarts):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/main/scripts/update-app.sh | sudo bash
+```
+
+> [!NOTE]
+> The script prompts for confirmation before overwriting. It requires an existing installation — use `install-app.sh` for a fresh install.
+
 ### 3. Connect Tailscale
 
 After the initial setup authenticate the server to your
@@ -166,6 +177,15 @@ Installs the controller as a managed service:
 - Creates an environment file at `/opt/panther-minor-controller/env`
 - Installs a `systemd` service (`panther-minor-controller.service`) that starts after Tailscale
 - Enables auto-restart on failure
+
+### `update-app.sh`
+
+Updates the controller binary without reconfiguring the service:
+
+- Downloads the latest binary from GitHub Releases
+- Prompts for confirmation before overwriting the existing binary
+- Stops the service, replaces the binary, then restarts it
+- Exits with a helpful message if no existing binary is found (suggests `install-app.sh`)
 
 ---
 
