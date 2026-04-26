@@ -1,7 +1,7 @@
 [package]
 name = "panther-minor-controller"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Remote controller for Panther Minor AI workstation"
 license = "MIT"
 
