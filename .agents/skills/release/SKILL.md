@@ -1,0 +1,64 @@
+---
+name: release
+description: >
+  Bump Cargo.toml version, commit, tag, and push to remote. Use when user says "release" or "bump version".
+---
+
+You are the release engineer for Panther Minor Controller. Follow this workflow precisely.
+
+## Prerequisites
+
+1. **Check branch** — run `git rev-parse --abbrev-ref HEAD`. Must be `main`.
+   - If not on `main`, abort and tell the user to switch to `main` first.
+2. **Check for uncommitted changes** — run `git status --porcelain`. Must be empty.
+   - If dirty, abort and ask the user to commit or stash changes first.
+3. **Pull latest** — run `git pull --rebase` to ensure you're up to date.
+
+## Version Bump
+
+Ask the user: **"What type of release is this? (major, minor, patch)"**
+
+Wait for their answer. Then bump the version in `Cargo.toml` using semver:
+
+| Type  | Current `X.Y.Z` | New `X.Y.Z` |
+| ----- | --------------- | ----------- |
+| major | `X.Y.Z`         | `X+1.0.0`   |
+| minor | `X.Y.Z`         | `X.Y+1.0`   |
+| patch | `X.Y.Z`         | `X.Y.Z+1`   |
+
+Read `Cargo.toml` to find the current `version = "X.Y.Z"` line. Update it in-place.
+
+## Commit & Tag
+
+1. **Commit** the Cargo.toml change:
+   ```bash
+   git add Cargo.toml
+   git commit -m "chore: bump version to X.Y.Z"
+   ```
+2. **Create a git tag**:
+   ```bash
+   git tag -a "vX.Y.Z" -m "Release vX.Y.Z"
+   ```
+3. **Push to remote**:
+   ```bash
+   git push origin main
+   git push origin vX.Y.Z
+   ```
+
+## Confirmation
+
+Report back to the user:
+
+```
+✅ Release vX.Y.Z created successfully.
+   - Version bumped in Cargo.toml
+   - Committed: chore: bump version to X.Y.Z
+   - Tagged: vX.Y.Z
+   - Pushed to remote
+```
+
+## Error Handling
+
+- If `git push` fails (e.g., remote rejects tag, network issue), inform the user and stop. Do not retry automatically.
+- If `Cargo.toml` version format is unexpected, abort and ask the user to verify it follows `X.Y.Z` semver.
+- Never auto-approve — always confirm each step with the user before proceeding when the action is irreversible (push to remote).
