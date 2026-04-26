@@ -58,27 +58,6 @@ cargo test --workspace # All
 cargo test power_on    # Filter by name
 ```
 
-## Files
-
-```text
-.editorconfig
-.gitattributes
-.github/workflows/{ci,release}.yml
-.prettierignore
-API.md
-Cargo.{toml,lock}
-commitlint.config.js
-lefthook.yml
-package.json
-pnpm-lock.yaml
-pnpm-workspace.yaml
-prettier.config.js
-README.md
-renovate.json
-scripts/
-src/{main, gpio, html, error}.rs
-```
-
 ## Env
 
 - `GPIO_PIN` — BCM pin (default: 17)
