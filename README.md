@@ -33,24 +33,16 @@ Light-weight secure remote control for Panther Minor in a single binary that run
 
 ```mermaid
 flowchart LR
-    subgraph LAN
-        Browser["🌐 Browser<br/>Dashboard & API"] -->|Tailscale| Pi["📟 Pi Zero 2 W<br/>Panther Minor Controller"]
-        Pi -->|GPIO relay| Panther["🐆 Panther Minor<br/>AI Workstation"]
-    end
+    U[Browser / Clients] --> D[Dashboard & API]
+    D -->|Tailscale| C[Controller App]
+    C --> R[Relay Module]
+    R --> P[Panther Minor]
 
-    subgraph Pi Zero 2 W
-        Relay["Relay Module<br/>VCC → 5V, GND → GND<br/>IN1 → BCM 17"]
-        App["Controller App<br/>Hyper HTTP server<br/>GPIO relay abstraction"]
-        Pi --> App --> Relay
-    end
-
-    subgraph Panther Minor
-        PWR["Power Button<br/>PWR+ ↔ PWR-"]
-        Relay -->|Shorts pins| PWR
-    end
+    C --> S[Power State Tracker]
+    S -->|Polls status| C
 ```
 
-The Controller runs on a **Raspberry Pi Zero 2 W** wired to a **5V relay module** that bridges the Panther Minor's power button pins. A short relay closure simulates a button press — **0.5s for power on/off**, **5s for force shutdown**. Communication between your browser and the Pi happens exclusively over **Tailscale**.
+The Controller runs on a **Raspberry Pi Zero 2 W** wired to a **5V relay module** that bridges the Panther Minor's power button pins (PWR+ ↔ PWR-). A short relay closure simulates a button press — **0.5s for power on/off**, **5s for force shutdown**. Communication between your browser and the Pi happens exclusively over **Tailscale**.
 
 ---
 
