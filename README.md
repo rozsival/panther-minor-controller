@@ -29,17 +29,42 @@ Light-weight secure remote control for Panther Minor in a single binary that run
 
 ---
 
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    subgraph LAN
+        Browser["🌐 Browser<br/>Dashboard & API"] -->|Tailscale| Pi["📟 Pi Zero 2 W<br/>Panther Minor Controller"]
+        Pi -->|GPIO relay| Panther["🐆 Panther Minor<br/>AI Workstation"]
+    end
+
+    subgraph Pi Zero 2 W
+        Relay["Relay Module<br/>VCC → 5V, GND → GND<br/>IN1 → BCM 17"]
+        App["Controller App<br/>Hyper HTTP server<br/>GPIO relay abstraction"]
+        Pi --> App --> Relay
+    end
+
+    subgraph Panther Minor
+        PWR["Power Button<br/>PWR+ ↔ PWR-"]
+        Relay -->|Shorts pins| PWR
+    end
+```
+
+The Controller runs on a **Raspberry Pi Zero 2 W** wired to a **5V relay module** that bridges the Panther Minor's power button pins. A short relay closure simulates a button press — **0.5s for power on/off**, **5s for force shutdown**. Communication between your browser and the Pi happens exclusively over **Tailscale**.
+
+---
+
 ## 🧰 Prerequisites
 
 ### Hardware
 
-| Component    | Recommendation                                  |
-| ------------ | ----------------------------------------------- |
-| Board        | **Raspberry Pi Zero 2 W**                       |
-| Power supply | Official Pi Zero USB PSU                        |
-| MicroSD card | 16 GB or more, Class 10 or U1                   |
-| Relay module | 5V single-channel relay module with octocoupler |
-| Wiring       | Jumper wires (female-to-female)                 |
+| Component    | Recommendation                     |
+| ------------ | ---------------------------------- |
+| Board        | **Raspberry Pi Zero 2 W**          |
+| Power supply | Official Pi Zero USB PSU           |
+| MicroSD card | 16 GB or more, Class 10 or U1      |
+| Relay module | 5V single-channel with octocoupler |
+| Wiring       | Jumper wires (female-to-female)    |
 
 ### Wiring
 
@@ -72,8 +97,7 @@ Connect the relay module to the Raspberry Pi GPIO as follows:
 
 ### 1. Set up the Raspberry Pi
 
-SSH into your Raspberry Pi and run the device setup script to configure the system, harden SSH, set up the firewall,
-and install Tailscale:
+SSH into your Raspberry Pi and run the device setup script:
 
 > [!WARNING]
 > SSH will be available on **port 2222** with **key-based authentication only**.
@@ -90,7 +114,7 @@ curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/m
 
 ### 2. Install the controller
 
-After the device setup completes, install the controller binary as a systemd service:
+After the device setup completes, install the controller binary as a `systemd` service:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/main/scripts/install-app.sh | sudo bash
@@ -148,7 +172,7 @@ Installs the controller as a managed service:
 
 - Downloads the latest binary from GitHub Releases
 - Creates an environment file at `/opt/panther-minor-controller/env`
-- Installs a systemd service (`panther-minor-controller.service`) that starts after Tailscale
+- Installs a `systemd` service (`panther-minor-controller.service`) that starts after Tailscale
 - Enables auto-restart on failure
 
 ---
@@ -214,4 +238,5 @@ The controller is designed with a defense-in-depth approach:
 ## 📚 More documentation
 
 - [API Reference](API.md) — details of the REST API endpoints and expected responses
+- [WOL Setup](WOL.md) — how to set up Wake-on-LAN for remote wake/sleep control (advanced)
 - [Panther Minor](https://github.com/rozsival/panther-minor) — the AI workstation this controller manages
