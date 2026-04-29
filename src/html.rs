@@ -297,6 +297,7 @@ pub fn dashboard_html(version: &str) -> String {
 
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+
                 try {
                     const resp = await fetch('/api/status');
                     const data = await resp.json();
@@ -307,6 +308,7 @@ pub fn dashboard_html(version: &str) -> String {
                     // Connection error, try again
                 }
             }
+
             return false;
         }
 
@@ -348,11 +350,14 @@ pub fn dashboard_html(version: &str) -> String {
             if (msg && !confirm(msg)) return;
 
             setBusy();
+
             try {
                 const resp = await fetch('/api/' + action, {
                     method: 'POST',
                 });
+
                 const data = await resp.json();
+
                 if (resp.ok) {
                     logEl.innerHTML = '<span class="msg success">' + data.message + '</span>';
                     const expectedPowerOn = action === 'power-on' || action === 'reset';
@@ -392,6 +397,7 @@ pub fn dashboard_html(version: &str) -> String {
             try {
                 const resp = await fetch('/api/health');
                 const data = await resp.json();
+
                 if (resp.ok) {
                     if (data.power_on) {
                         setOnline(data.power_on);
