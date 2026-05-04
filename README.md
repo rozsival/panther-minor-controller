@@ -137,7 +137,7 @@ rm install-app.sh
 ```
 
 > [!TIP]
-> Customize GPIO_PIN and PORT in `/opt/panther-minor-controller/env` as needed.
+> Customize variables in `/opt/panther-minor-controller/env` as needed.
 
 #### Update the controller
 
