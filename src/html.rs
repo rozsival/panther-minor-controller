@@ -35,7 +35,7 @@ pub fn dashboard_html(version: &str) -> String {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             background: var(--bg);
             color: var(--text);
-            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -439,5 +439,5 @@ pub fn dashboard_html(version: &str) -> String {
     </script>
 </body>
 </html>"#
-        .replace("vVERSION", version)
+        .replace("vVERSION", &format!("v{version}"))
 }
