@@ -48,5 +48,6 @@ jobs:
             target/aarch64-unknown-linux-gnu/release/panther-minor-controller
             scripts/setup-device.sh
             scripts/install-app.sh
+            scripts/update-app.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

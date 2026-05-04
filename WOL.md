@@ -11,7 +11,7 @@ This guide walks you through setting up **Sleep Mode** and **Wake on LAN (WOL)**
 
 ### 1. Enable WOL in BIOS
 
-Boot the Panther into BIOS/UEFI and enable one of the following (wording varies by motherboard):
+Boot Panther into BIOS/UEFI and enable one of the following (wording varies by motherboard):
 
 - **Wake on LAN**
 - **Power on by PCI-E**
@@ -30,7 +30,7 @@ sudo ethtool -s <interface> wol g
 
 ### 3. Test the Setup
 
-Put the Panther to sleep and try waking it from the Controller:
+Put Panther to sleep and try waking it from the Controller:
 
 ```bash
 # On Panther — put it to sleep
@@ -85,10 +85,10 @@ Add this line (replace `<user>` with your Panther Minor username):
 Set up these aliases on your **workstation** for one-command sleep and wake:
 
 ```bash
-# Suspend the Panther remotely
+# Suspend Panther remotely
 alias panther-minor-sleep='ssh -f -p <port> <user>@<panther-hostname> "sudo systemctl suspend"'
 
-# Wake the Panther via the Controller
+# Wake Panther via Controller
 alias panther-minor-wake='ssh -f -p <port> <user>@<controller-hostname> "wakeonlan <PANTHER_MAC_ADDRESS>"'
 ```
 
