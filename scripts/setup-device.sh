@@ -18,9 +18,13 @@ echo ""
 echo "🖲️  Panther Minor Controller — Device Setup"
 echo "============================================"
 
+# Detect actual user (handles sudo context correctly)
+# logname returns the original login name even when running under sudo
+ACTUAL_USER="${SUDO_USER:-$(logname 2>/dev/null || echo root)}"
+
 # Default values before prompts (prevents unbound variable errors)
 PANTHER_SERVER_NAME="${PANTHER_SERVER_NAME:-${HOSTNAME}}"
-PANTHER_ALLOWED_USER="${PANTHER_ALLOWED_USER:-${USER}}"
+PANTHER_ALLOWED_USER="${PANTHER_ALLOWED_USER:-${ACTUAL_USER}}"
 PANTHER_SSH_PORT="${PANTHER_SSH_PORT:-2222}"
 PANTHER_TIMEZONE="${PANTHER_TIMEZONE:-Europe/Prague}"
 

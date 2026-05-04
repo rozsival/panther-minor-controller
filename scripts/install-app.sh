@@ -4,7 +4,11 @@ set -euo pipefail
 # ── Configuration ─────────────────────────────────────────────────────────────
 INSTALL_DIR="/opt/panther-minor-controller"
 SERVICE_NAME="panther-minor-controller"
-RUN_USER="${USER:-root}"
+
+# Detect actual user (handles sudo context correctly)
+# logname returns the original login name even when running under sudo
+RUN_USER="${SUDO_USER:-$(logname 2>/dev/null || echo root)}"
+
 SYSTEMD_UNIT="/etc/systemd/system/${SERVICE_NAME}.service"
 BIN_URL="https://github.com/rozsival/panther-minor-controller/releases/latest/download/panther-minor-controller"
 ENV_FILE="${INSTALL_DIR}/env"
