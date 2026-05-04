@@ -36,7 +36,7 @@ Read `Cargo.toml` to find the current `version = "X.Y.Z"` line. Update it in-pla
    ```
 2. **Commit** the Cargo.toml change:
    ```bash
-   git add Cargo.toml
+   git add Cargo.toml Cargo.lock
    git commit -m "chore(release): vX.Y.Z"
    ```
 3. **Create a git tag**:
