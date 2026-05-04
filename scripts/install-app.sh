@@ -100,6 +100,9 @@ cat >"$ENV_FILE" <<EOF
 # Panther Minor Controller environment
 GPIO_PIN=17
 PORT=8080
+STATUS_POLL_MS=2000
+# STATUS_HOST=192.168.1.50
+# STATUS_PORT=22
 EOF
 
 chmod 600 "$ENV_FILE"
@@ -138,7 +141,7 @@ print_summary_table \
   "Config" "$ENV_FILE" \
   "Unit" "$SYSTEMD_UNIT"
 
-log_warn "⚠  Review and customize GPIO_PIN and PORT as needed."
+log_warn "⚠  Review and customize GPIO_PIN, PORT, STATUS_HOST, and STATUS_PORT as needed."
 echo ""
 
 log_info "Useful commands:"

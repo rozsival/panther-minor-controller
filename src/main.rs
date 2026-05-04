@@ -17,8 +17,32 @@ use hyper::{Request, Response, StatusCode, header};
 use hyper_util::rt::TokioIo;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex;
+use tokio::time::{Duration, sleep, timeout};
+
+const DEFAULT_PORT: u16 = 8080;
+const DEFAULT_STATUS_POLL_MS: u64 = 2000;
+const STATUS_CONNECT_TIMEOUT_MS: u64 = 1000;
+
+#[derive(Clone, Debug)]
+struct StatusProbe {
+    host: String,
+    port: u16,
+}
+
+impl StatusProbe {
+    fn new(host: impl Into<String>, port: u16) -> Self {
+        Self {
+            host: host.into(),
+            port,
+        }
+    }
+
+    fn address(&self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
+}
 
 /// Shared application state.
 #[derive(Clone)]
@@ -28,6 +52,8 @@ struct AppState {
     power_on: std::sync::Arc<std::sync::RwLock<bool>>,
     /// Status polling interval in milliseconds (default: 2000).
     poll_ms: u64,
+    /// Optional TCP reachability target used to detect the real device status.
+    status_probe: Option<StatusProbe>,
 }
 
 #[tokio::main]
@@ -41,18 +67,20 @@ async fn main() -> Result<()> {
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(8080);
+        .unwrap_or(DEFAULT_PORT);
 
     // Parse status poll interval from environment (default: 2000ms).
     let poll_ms: u64 = std::env::var("STATUS_POLL_MS")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(2000);
+        .unwrap_or(DEFAULT_STATUS_POLL_MS);
+    let status_probe = status_probe_from_env()?;
 
     let state = AppState {
         relay: Arc::new(Mutex::new(relay)),
         power_on: Arc::new(std::sync::RwLock::new(false)),
         poll_ms,
+        status_probe: status_probe.clone(),
     };
 
     // Bind to localhost only — never accept remote connections
@@ -67,6 +95,17 @@ async fn main() -> Result<()> {
         "   GPIO Pin: {}",
         gpio_pin.unwrap_or(gpio::DEFAULT_GPIO_PIN)
     );
+    match status_probe {
+        Some(probe) => println!("   Status probe: {}", probe.address()),
+        None => println!("   Status probe: disabled (set STATUS_HOST and STATUS_PORT)"),
+    }
+
+    if state.status_probe.is_some() {
+        let polling_state = state.clone();
+        tokio::spawn(async move {
+            status_poller(polling_state).await;
+        });
+    }
 
     tokio::spawn(async move {
         if let Err(e) = http_server(listener, state).await {
@@ -103,6 +142,60 @@ async fn http_server(listener: TcpListener, state: AppState) -> Result<()> {
             }
         });
     }
+}
+
+fn status_probe_from_env() -> Result<Option<StatusProbe>> {
+    let status_host = std::env::var("STATUS_HOST")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    let status_port = match std::env::var("STATUS_PORT") {
+        Ok(value) => Some(
+            value
+                .parse::<u16>()
+                .map_err(|e| AppError::Http(format!("Invalid STATUS_PORT '{value}': {e}")))?,
+        ),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(std::env::VarError::NotUnicode(_)) => {
+            return Err(AppError::Http(
+                "STATUS_PORT must contain valid UTF-8 text".to_string(),
+            ));
+        }
+    };
+
+    match (status_host, status_port) {
+        (Some(host), Some(port)) => Ok(Some(StatusProbe::new(host, port))),
+        (None, None) => Ok(None),
+        (Some(_), None) => Err(AppError::Http(
+            "STATUS_PORT must be set when STATUS_HOST is configured".to_string(),
+        )),
+        (None, Some(_)) => Err(AppError::Http(
+            "STATUS_HOST must be set when STATUS_PORT is configured".to_string(),
+        )),
+    }
+}
+
+async fn status_poller(state: AppState) {
+    let Some(status_probe) = state.status_probe.clone() else {
+        return;
+    };
+
+    loop {
+        let power_on = probe_status(&status_probe).await;
+        *state.power_on.write().unwrap() = power_on;
+        sleep(Duration::from_millis(state.poll_ms)).await;
+    }
+}
+
+async fn probe_status(status_probe: &StatusProbe) -> bool {
+    matches!(
+        timeout(
+            Duration::from_millis(STATUS_CONNECT_TIMEOUT_MS),
+            TcpStream::connect(status_probe.address()),
+        )
+        .await,
+        Ok(Ok(_))
+    )
 }
 
 async fn handle_request<B>(req: Request<B>, state: AppState) -> Result<Response<Full<Bytes>>>
@@ -162,7 +255,9 @@ where
             }
             let mut relay = state.relay.lock().await;
             relay.short_press().await?;
-            *state.power_on.write().unwrap() = true;
+            if state.status_probe.is_none() {
+                *state.power_on.write().unwrap() = true;
+            }
             Ok(json_response(
                 StatusCode::OK,
                 &serde_json::json!({
@@ -187,7 +282,9 @@ where
             }
             let mut relay = state.relay.lock().await;
             relay.graceful_power_off().await?;
-            *state.power_on.write().unwrap() = false;
+            if state.status_probe.is_none() {
+                *state.power_on.write().unwrap() = false;
+            }
             Ok(json_response(
                 StatusCode::OK,
                 &serde_json::json!({
@@ -212,7 +309,9 @@ where
             }
             let mut relay = state.relay.lock().await;
             relay.long_press().await?;
-            *state.power_on.write().unwrap() = false;
+            if state.status_probe.is_none() {
+                *state.power_on.write().unwrap() = false;
+            }
             Ok(json_response(
                 StatusCode::OK,
                 &serde_json::json!({
@@ -237,7 +336,9 @@ where
             }
             let mut relay = state.relay.lock().await;
             relay.hard_reset().await?;
-            *state.power_on.write().unwrap() = true;
+            if state.status_probe.is_none() {
+                *state.power_on.write().unwrap() = true;
+            }
             Ok(json_response(
                 StatusCode::OK,
                 &serde_json::json!({
@@ -301,6 +402,8 @@ mod tests {
         power_on: Arc<std::sync::RwLock<bool>>,
         /// Status polling interval in ms.
         poll_ms: u64,
+        /// Optional TCP status probe config.
+        status_probe: Option<StatusProbe>,
     }
 
     impl TestState {
@@ -312,7 +415,13 @@ mod tests {
                 calls,
                 power_on: Arc::new(std::sync::RwLock::new(false)),
                 poll_ms: 2000,
+                status_probe: None,
             }
+        }
+
+        fn with_status_probe(mut self, host: &str, port: u16) -> Self {
+            self.status_probe = Some(StatusProbe::new(host, port));
+            self
         }
 
         fn app_state(&self) -> AppState {
@@ -320,6 +429,7 @@ mod tests {
                 relay: self.relay.clone(),
                 power_on: self.power_on.clone(),
                 poll_ms: self.poll_ms,
+                status_probe: self.status_probe.clone(),
             }
         }
 
@@ -889,5 +999,38 @@ mod tests {
             .unwrap();
         let json = body_json(resp).await;
         assert_eq!(json["poll_ms"], 2000);
+    }
+
+    #[tokio::test]
+    async fn status_probe_reports_online_when_tcp_target_is_reachable() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let accept_task = tokio::spawn(async move {
+            let _ = listener.accept().await.unwrap();
+        });
+
+        assert!(probe_status(&StatusProbe::new("127.0.0.1", addr.port())).await);
+
+        accept_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn power_on_does_not_optimistically_change_state_when_probe_is_enabled() {
+        let state = test_state_with_status_probe();
+
+        let resp = handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let resp = handle_request(request("GET", "/api/status"), state.app_state())
+            .await
+            .unwrap();
+        let json = body_json(resp).await;
+        assert_eq!(json["power_on"], false);
+    }
+
+    fn test_state_with_status_probe() -> TestState {
+        test_state().with_status_probe("127.0.0.1", 22)
     }
 }

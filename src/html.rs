@@ -270,6 +270,9 @@ pub fn dashboard_html(version: &str) -> String {
         const btnShutdown = document.getElementById('btn-shutdown');
         const btnReset = document.getElementById('btn-reset');
         const allButtons = [btnPowerOn, btnPowerOff, btnShutdown, btnReset];
+        let actionInProgress = false;
+        let statusPollMs = 2000;
+        let statusPollHandle = null;
 
         const confirmations = {
             'power-off': 'Send graceful shutdown signal to the device?\n\nAll running processes will be stopped and the device will shut down safely.',
@@ -291,6 +294,17 @@ pub fn dashboard_html(version: &str) -> String {
             allButtons.forEach(b => b.disabled = true);
         }
 
+        async function fetchStatus() {
+            const resp = await fetch('/api/status');
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(data.message || 'Connection failed');
+            }
+
+            return data;
+        }
+
         async function pollStatus(expectedPowerOn, delayMs, pollIntervalMs, maxAttempts) {
             // Wait for the expected delay before starting to poll
             await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -299,8 +313,7 @@ pub fn dashboard_html(version: &str) -> String {
                 await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
 
                 try {
-                    const resp = await fetch('/api/status');
-                    const data = await resp.json();
+                    const data = await fetchStatus();
                     if (data.power_on === expectedPowerOn) {
                         return true;
                     }
@@ -319,20 +332,14 @@ pub fn dashboard_html(version: &str) -> String {
             btnReset.disabled = !powerOn;
         }
 
-        function setOnline(powerOn) {
-            dot.className = 'dot success';
-            text.textContent = 'Online';
+        function setStatus(powerOn, preserveLog = false) {
+            dot.className = powerOn ? 'dot success' : 'dot idle';
+            text.textContent = powerOn ? 'Online' : 'Offline';
             updateButtons(powerOn);
-            logEl.innerHTML = '<span>Waiting for action…</span>';
-        }
 
-        function setOffline() {
-            dot.className = 'dot idle';
-            text.textContent = 'Offline';
-            btnPowerOn.disabled = false;
-            btnPowerOff.disabled = true;
-            btnShutdown.disabled = true;
-            btnReset.disabled = true;
+            if (!preserveLog) {
+                logEl.innerHTML = '<span>Waiting for action…</span>';
+            }
         }
 
         function setError(msg) {
@@ -345,10 +352,34 @@ pub fn dashboard_html(version: &str) -> String {
             btnReset.disabled = true;
         }
 
+        async function refreshStatus({ preserveLog = true } = {}) {
+            if (actionInProgress) {
+                return;
+            }
+
+            try {
+                const data = await fetchStatus();
+                setStatus(data.power_on, preserveLog);
+            } catch {
+                setError('Network error');
+            }
+        }
+
+        function startStatusPolling() {
+            if (statusPollHandle !== null) {
+                clearInterval(statusPollHandle);
+            }
+
+            statusPollHandle = setInterval(() => {
+                void refreshStatus();
+            }, statusPollMs);
+        }
+
         async function sendAction(action) {
             const msg = confirmations[action];
             if (msg && !confirm(msg)) return;
 
+            actionInProgress = true;
             setBusy();
 
             try {
@@ -362,26 +393,18 @@ pub fn dashboard_html(version: &str) -> String {
                     logEl.innerHTML = '<span class="msg success">' + data.message + '</span>';
                     const expectedPowerOn = action === 'power-on' || action === 'reset';
                     const delayMs = data.expected_delay_ms || 2000;
-                    const pollIntervalMs = data.poll_ms || 2000;
+                    const pollIntervalMs = statusPollMs;
 
                     // Poll for status to confirm the device actually reached the expected state
                     setPolling();
                     const confirmed = await pollStatus(expectedPowerOn, delayMs, pollIntervalMs, 15);
 
                     if (confirmed) {
-                        if (expectedPowerOn) {
-                            setOnline(true);
-                        } else {
-                            setOffline();
-                        }
+                        setStatus(expectedPowerOn);
                     } else {
                         // Timeout or mismatch — fall back to optimistic state
                         logEl.innerHTML = '<span class="msg busy">Device state not confirmed — showing optimistic state</span>';
-                        if (expectedPowerOn) {
-                            setOnline(true);
-                        } else {
-                            setOffline();
-                        }
+                        setStatus(expectedPowerOn, true);
                     }
                 } else {
                     logEl.innerHTML = '<span class="msg error">' + data.message + '</span>';
@@ -389,6 +412,8 @@ pub fn dashboard_html(version: &str) -> String {
                 }
             } catch (err) {
                 setError('Network error');
+            } finally {
+                actionInProgress = false;
             }
         }
 
@@ -399,11 +424,9 @@ pub fn dashboard_html(version: &str) -> String {
                 const data = await resp.json();
 
                 if (resp.ok) {
-                    if (data.power_on) {
-                        setOnline(data.power_on);
-                    } else {
-                        setOffline();
-                    }
+                    statusPollMs = data.poll_ms || statusPollMs;
+                    setStatus(data.power_on);
+                    startStatusPolling();
                 } else {
                     setError('Connection failed');
                 }

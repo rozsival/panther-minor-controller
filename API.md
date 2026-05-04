@@ -25,7 +25,8 @@ Returns system health information:
 GET /api/status
 ```
 
-Returns current power state:
+Returns current power state. `power_on` is driven by the controller's TCP reachability probe when `STATUS_HOST` and
+`STATUS_PORT` are configured:
 
 ```json
 {

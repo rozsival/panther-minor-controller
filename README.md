@@ -18,14 +18,14 @@ Light-weight secure remote control for Panther Minor in a single binary that run
 
 ## ✨ Features
 
-| Feature                  | What it gives you                                                                         |
-| ------------------------ | ----------------------------------------------------------------------------------------- |
-| **Web dashboard**        | Clean, responsive interface with real-time status, action buttons, and confirmation flow  |
-| **REST API**             | Full programmatic control — integrate with scripts, automation, or other tools            |
-| **Status tracking**      | Internal power-state tracking with `/api/health` and `/api/status` endpoints              |
-| **Action confirmation**  | Dashboard polls status after each action to confirm the device reached the expected state |
-| **Secure remote access** | Tailscale-only access, hardened SSH, firewall, and fail2ban                               |
-| **Zero-touch install**   | One script to prepare the Raspberry Pi, another to install and daemonize the controller   |
+| Feature                  | What it gives you                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| **Web dashboard**        | Clean, responsive interface with real-time status, action buttons, and confirmation flow    |
+| **REST API**             | Full programmatic control — integrate with scripts, automation, or other tools              |
+| **Status tracking**      | TCP reachability polling keeps `/api/health` and `/api/status` aligned with the real device |
+| **Action confirmation**  | Dashboard keeps polling status after each action and during normal viewing                  |
+| **Secure remote access** | Tailscale-only access, hardened SSH, firewall, and fail2ban                                 |
+| **Zero-touch install**   | One script to prepare the Raspberry Pi, another to install and daemonize the controller     |
 
 ---
 
@@ -201,8 +201,8 @@ The web dashboard provides a clean interface with four action buttons:
 | 🔴 Shutdown   | Force shutdown        | Long press 5s               |
 | 🔄 Hard Reset | Power cycle           | 5s off → 2s pause → 0.5s on |
 
-The dashboard tracks real-time status, disables buttons when actions are in progress, and polls the device state after
-each action to confirm it reached the expected state.
+The dashboard tracks real-time status, disables buttons when actions are in progress, and keeps polling the device state
+over the API so out-of-band power changes show up automatically.
 
 ---
 
@@ -229,11 +229,13 @@ sudo systemctl enable panther-minor-controller
 
 Env vars are set in `/opt/panther-minor-controller/env` and loaded by the `systemd` service.
 
-| Variable         | Description                | Default |
-| ---------------- | -------------------------- | ------- |
-| `GPIO_PIN`       | BCM GPIO pin for the relay | `17`    |
-| `PORT`           | HTTP server port           | `8080`  |
-| `STATUS_POLL_MS` | Status polling interval    | `2000`  |
+| Variable         | Description                                           | Default |
+| ---------------- | ----------------------------------------------------- | ------- |
+| `GPIO_PIN`       | BCM GPIO pin for the relay                            | `17`    |
+| `PORT`           | HTTP server port                                      | `8080`  |
+| `STATUS_POLL_MS` | Status polling interval for the backend and dashboard | `2000`  |
+| `STATUS_HOST`    | Hostname or IP address to probe over TCP              | —       |
+| `STATUS_PORT`    | TCP port used for the reachability probe              | —       |
 
 ---
 
