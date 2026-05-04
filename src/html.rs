@@ -273,6 +273,7 @@ pub fn dashboard_html(version: &str) -> String {
         const allButtons = [btnPowerOn, btnPowerOff, btnShutdown, btnReset];
         let actionInProgress = false;
         let statusPollMs = 2000;
+        let confirmationPollMs = 5000;
         let statusPollHandle = null;
 
         const confirmations = {
@@ -394,7 +395,7 @@ pub fn dashboard_html(version: &str) -> String {
                     logEl.innerHTML = '<span class="msg success">' + data.message + '</span>';
                     const expectedPowerOn = action === 'power-on' || action === 'reset';
                     const delayMs = data.expected_delay_ms || 2000;
-                    const pollIntervalMs = statusPollMs;
+                    const pollIntervalMs = data.confirmation_poll_ms || confirmationPollMs;
 
                     // Poll for status to confirm the device actually reached the expected state
                     setPolling();

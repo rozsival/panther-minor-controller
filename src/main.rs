@@ -23,7 +23,12 @@ use tokio::time::{Duration, sleep, timeout};
 
 const DEFAULT_PORT: u16 = 8080;
 const DEFAULT_STATUS_POLL_MS: u64 = 2000;
+const DEFAULT_CONFIRMATION_POLL_MS: u64 = 5000;
 const STATUS_CONNECT_TIMEOUT_MS: u64 = 1000;
+const POWER_ON_EXPECTED_DELAY_MS: u64 = 60_000;
+const POWER_OFF_EXPECTED_DELAY_MS: u64 = 30_000;
+const SHUTDOWN_EXPECTED_DELAY_MS: u64 = 15_000;
+const RESET_EXPECTED_DELAY_MS: u64 = 75_000;
 
 #[derive(Clone, Debug)]
 struct StatusProbe {
@@ -264,7 +269,8 @@ where
                     "status": "success",
                     "action": "power-on",
                     "message": "Short press (0.5s) sent",
-                    "expected_delay_ms": 1000
+                    "expected_delay_ms": POWER_ON_EXPECTED_DELAY_MS,
+                    "confirmation_poll_ms": DEFAULT_CONFIRMATION_POLL_MS
                 }),
             ))
         }
@@ -291,7 +297,8 @@ where
                     "status": "success",
                     "action": "power-off",
                     "message": "Graceful shutdown signal sent (0.5s)",
-                    "expected_delay_ms": 1000
+                    "expected_delay_ms": POWER_OFF_EXPECTED_DELAY_MS,
+                    "confirmation_poll_ms": DEFAULT_CONFIRMATION_POLL_MS
                 }),
             ))
         }
@@ -318,7 +325,8 @@ where
                     "status": "success",
                     "action": "shutdown",
                     "message": "Force shutdown (5s) sent",
-                    "expected_delay_ms": 6000
+                    "expected_delay_ms": SHUTDOWN_EXPECTED_DELAY_MS,
+                    "confirmation_poll_ms": DEFAULT_CONFIRMATION_POLL_MS
                 }),
             ))
         }
@@ -345,7 +353,8 @@ where
                     "status": "success",
                     "action": "reset",
                     "message": "Hard reset sequence sent (5s + 2s pause + 0.5s)",
-                    "expected_delay_ms": 8000
+                    "expected_delay_ms": RESET_EXPECTED_DELAY_MS,
+                    "confirmation_poll_ms": DEFAULT_CONFIRMATION_POLL_MS
                 }),
             ))
         }
@@ -949,7 +958,7 @@ mod tests {
             .await
             .unwrap();
         let json = body_json(resp).await;
-        assert_eq!(json["expected_delay_ms"], 1000);
+        assert_eq!(json["expected_delay_ms"], POWER_ON_EXPECTED_DELAY_MS);
     }
 
     #[tokio::test]
@@ -962,7 +971,7 @@ mod tests {
             .await
             .unwrap();
         let json = body_json(resp).await;
-        assert_eq!(json["expected_delay_ms"], 1000);
+        assert_eq!(json["expected_delay_ms"], POWER_OFF_EXPECTED_DELAY_MS);
     }
 
     #[tokio::test]
@@ -975,7 +984,7 @@ mod tests {
             .await
             .unwrap();
         let json = body_json(resp).await;
-        assert_eq!(json["expected_delay_ms"], 6000);
+        assert_eq!(json["expected_delay_ms"], SHUTDOWN_EXPECTED_DELAY_MS);
     }
 
     #[tokio::test]
@@ -988,7 +997,28 @@ mod tests {
             .await
             .unwrap();
         let json = body_json(resp).await;
-        assert_eq!(json["expected_delay_ms"], 8000);
+        assert_eq!(json["expected_delay_ms"], RESET_EXPECTED_DELAY_MS);
+    }
+
+    #[tokio::test]
+    async fn action_responses_include_confirmation_poll_ms() {
+        let state = test_state();
+
+        let power_on = handle_request(request("POST", "/api/power-on"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(
+            body_json(power_on).await["confirmation_poll_ms"],
+            DEFAULT_CONFIRMATION_POLL_MS
+        );
+
+        let power_off = handle_request(request("POST", "/api/power-off"), state.app_state())
+            .await
+            .unwrap();
+        assert_eq!(
+            body_json(power_off).await["confirmation_poll_ms"],
+            DEFAULT_CONFIRMATION_POLL_MS
+        );
     }
 
     #[tokio::test]

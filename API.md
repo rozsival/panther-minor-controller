@@ -42,6 +42,8 @@ POST /api/power-on
 ```
 
 Sends a short press (0.5s) to power on the workstation. Returns `400` if already on.
+Successful action responses include `expected_delay_ms` and `confirmation_poll_ms`, which the dashboard uses when
+waiting for the TCP probe to reflect the new state.
 
 ## Power Off
 
