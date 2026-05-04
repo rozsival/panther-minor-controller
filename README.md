@@ -97,19 +97,24 @@ SSH into your Raspberry Pi and run the device setup script:
 > Reconnect with: `ssh -p 2222 <user>@<pizero-ip>`
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/refs/heads/main/scripts/setup-device.sh | sudo bash
+wget https://raw.githubusercontent.com/rozsival/panther-minor-controller/refs/heads/main/scripts/setup-device.sh -O setup-device.sh
+sudo bash setup-device.sh
+rm setup-device.sh
 ```
 
 > [!NOTE]
 > The script is interactive — it will prompt for server name, allowed user, SSH port, and timezone.
-> Default values are suggested for each.
+> Default values are suggested for each. If you prefer non-interactive mode, set environment variables:
+> `sudo PANTHER_SERVER_NAME=myhost PANTHER_ALLOWED_USER=pi bash setup-device.sh`
 
 ### 2. Install the controller
 
 After the device setup completes, install the controller binary as a `systemd` service:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/refs/heads/main/scripts/install-app.sh | sudo bash
+wget https://raw.githubusercontent.com/rozsival/panther-minor-controller/refs/heads/main/scripts/install-app.sh -O install-app.sh
+sudo bash install-app.sh
+rm install-app.sh
 ```
 
 > [!TIP]
@@ -120,7 +125,9 @@ curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/r
 To update to a newer release, run the update script (it stops the service, replaces the binary, then restarts):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rozsival/panther-minor-controller/refs/heads/main/scripts/update-app.sh | sudo bash
+wget https://raw.githubusercontent.com/rozsival/panther-minor-controller/refs/heads/main/scripts/update-app.sh -O update-app.sh
+sudo bash update-app.sh
+rm update-app.sh
 ```
 
 > [!NOTE]

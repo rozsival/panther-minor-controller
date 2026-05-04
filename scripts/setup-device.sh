@@ -18,17 +18,26 @@ echo ""
 echo "🖲️  Panther Minor Controller — Device Setup"
 echo "============================================"
 
-read -r -p "Enter server name (default: ${HOSTNAME}): " server_name
-PANTHER_SERVER_NAME="${server_name:-$HOSTNAME}"
+# Default values before prompts (prevents unbound variable errors)
+PANTHER_SERVER_NAME="${PANTHER_SERVER_NAME:-${HOSTNAME}}"
+PANTHER_ALLOWED_USER="${PANTHER_ALLOWED_USER:-${USER}}"
+PANTHER_SSH_PORT="${PANTHER_SSH_PORT:-2222}"
+PANTHER_TIMEZONE="${PANTHER_TIMEZONE:-Europe/Prague}"
 
-read -r -p "Enter allowed user (default: ${USER}): " allowed_user
-PANTHER_ALLOWED_USER="${allowed_user:-$USER}"
+# Prompt for values (use defaults if non-interactive)
+if [[ $- == *i* ]] || [[ -t 0 ]]; then
+  read -r -p "Enter server name (default: ${PANTHER_SERVER_NAME}): " server_name_in
+  [[ -n "$server_name_in" ]] && PANTHER_SERVER_NAME="$server_name_in"
 
-read -r -p "Enter SSH port (default: 2222): " ssh_port
-PANTHER_SSH_PORT="${ssh_port:-2222}"
+  read -r -p "Enter allowed user (default: ${PANTHER_ALLOWED_USER}): " allowed_user_in
+  [[ -n "$allowed_user_in" ]] && PANTHER_ALLOWED_USER="$allowed_user_in"
 
-read -r -p "Enter timezone (default: Europe/Prague): " timezone
-PANTHER_TIMEZONE="${timezone:-Europe/Prague}"
+  read -r -p "Enter SSH port (default: ${PANTHER_SSH_PORT}): " ssh_port_in
+  [[ -n "$ssh_port_in" ]] && PANTHER_SSH_PORT="$ssh_port_in"
+
+  read -r -p "Enter timezone (default: ${PANTHER_TIMEZONE}): " timezone_in
+  [[ -n "$timezone_in" ]] && PANTHER_TIMEZONE="$timezone_in"
+fi
 
 echo ""
 echo "📋 Setup Summary:"
