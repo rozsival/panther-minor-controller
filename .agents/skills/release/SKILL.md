@@ -30,16 +30,20 @@ Read `Cargo.toml` to find the current `version = "X.Y.Z"` line. Update it in-pla
 
 ## Commit & Tag
 
-1. **Commit** the Cargo.toml change:
+1. **Refresh lockfile** after version bump:
+   ```bash
+   cargo build --workspace
+   ```
+2. **Commit** the Cargo.toml change:
    ```bash
    git add Cargo.toml
-   git commit -m "chore: bump version to X.Y.Z"
+   git commit -m "chore(release): vX.Y.Z"
    ```
-2. **Create a git tag**:
+3. **Create a git tag**:
    ```bash
    git tag -a "vX.Y.Z" -m "Release vX.Y.Z"
    ```
-3. **Push to remote**:
+4. **Push to remote**:
    ```bash
    git push origin main
    git push origin vX.Y.Z
