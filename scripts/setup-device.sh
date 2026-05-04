@@ -68,6 +68,7 @@ apt update -y
 apt upgrade -y
 apt install -y \
   fail2ban \
+  git \
   htop \
   jq \
   starship \
