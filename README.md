@@ -72,7 +72,7 @@ Connect the relay module to the Raspberry Pi GPIO as follows:
 | NO        | Panther Minor PWR- | Bridges PWR pins when relay closes |
 
 > [!NOTE]
-> The relay is **active-low**: setting the GPIO pin LOW closes the relay (shorts the PWR pins). The default GPIO pin
+> The relay is **active-high**: setting the GPIO pin HIGH closes the relay (shorts the PWR pins). The default GPIO pin
 > is **BCM 17**. Change it via the `GPIO_PIN` environment variable.
 
 ### Software

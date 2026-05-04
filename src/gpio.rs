@@ -70,15 +70,15 @@ impl Default for MockRelay {
 
 #[cfg(target_os = "linux")]
 impl Relay {
-    /// Initialize the relay on the specified GPIO pin.
     pub fn new(pin_number: Option<u8>) -> Result<Self> {
         let pin_num = pin_number.unwrap_or(DEFAULT_GPIO_PIN);
         let gpio = rppal::gpio::Gpio::new()
             .map_err(|e| AppError::GpioSetup(format!("Failed to initialize GPIO: {e}")))?;
+
         let mut pin = gpio
             .get(pin_num)
             .map_err(|e| AppError::GpioSetup(format!("Failed to get GPIO pin {pin_num}: {e}")))?
-            .into_output();
+            .into_output_low();
 
         pin.set_reset_on_drop(false);
 
@@ -87,14 +87,14 @@ impl Relay {
 
     async fn activate(&mut self) -> Result<()> {
         if let Some(ref mut pin) = self.pin {
-            pin.set_low();
+            pin.set_high();
         }
         Ok(())
     }
 
     async fn deactivate(&mut self) -> Result<()> {
         if let Some(ref mut pin) = self.pin {
-            pin.set_high();
+            pin.set_low();
         }
         Ok(())
     }
