@@ -102,14 +102,6 @@ sudo bash setup-device.sh
 rm setup-device.sh
 ```
 
-> [!NOTE]
-> The script is interactive — it will prompt for server name, allowed user, SSH port, and timezone.
-> Default values are suggested for each. If you prefer non-interactive mode, set environment variables:
-> `sudo PANTHER_SERVER_NAME=myhost PANTHER_ALLOWED_USER=pi bash setup-device.sh`
-
-> [!NOTE]
-> The script prompts for confirmation before overwriting. It requires an existing installation — use `install-app.sh` for a fresh install.
-
 ### 2. Connect Tailscale
 
 After the initial setup authenticate the server to your
@@ -136,8 +128,8 @@ sudo bash install-app.sh
 rm install-app.sh
 ```
 
-> [!TIP]
-> Customize variables in `/opt/panther-minor-controller/env` as needed.
+> [!IMPORTANT]
+> Customize variables in `/opt/panther-minor-controller/env` to match your setup.
 
 #### Update the controller
 
