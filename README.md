@@ -97,7 +97,7 @@ SSH into your Raspberry Pi and run the device setup script:
 > Reconnect with: `ssh -p 2222 <user>@<pizero-ip>`
 
 ```bash
-wget https://raw.githubusercontent.com/rozsival/panther-minor-controller/refs/heads/main/scripts/setup-device.sh -O setup-device.sh
+wget https://github.com/rozsival/panther-minor-controller/releases/latest/download/setup-device.sh -O setup-device.sh
 sudo bash setup-device.sh
 rm setup-device.sh
 ```
@@ -131,7 +131,7 @@ Follow the browser link to authenticate. Once connected, access your Raspberry t
 After the device setup completes, install the controller binary as a `systemd` service:
 
 ```bash
-wget https://raw.githubusercontent.com/rozsival/panther-minor-controller/refs/heads/main/scripts/install-app.sh -O install-app.sh
+wget https://github.com/rozsival/panther-minor-controller/releases/latest/download/install-app.sh -O install-app.sh
 sudo bash install-app.sh
 rm install-app.sh
 ```
@@ -144,12 +144,12 @@ rm install-app.sh
 To update to a newer release, run the update script (it stops the service, replaces the binary, then restarts):
 
 ```bash
-wget https://raw.githubusercontent.com/rozsival/panther-minor-controller/refs/heads/main/scripts/update-app.sh -O update-app.sh
+wget https://github.com/rozsival/panther-minor-controller/releases/latest/download/update-app.sh -O update-app.sh
 sudo bash update-app.sh
 rm update-app.sh
 ```
 
-4. Access the dashboard
+### 4. Access the dashboard
 
 Open your browser and navigate to `http://pi-zero:8080` (replace with your Pi's Tailscale hostname and port if customized). You should see the dashboard with action buttons and real-time status.
 
