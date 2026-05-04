@@ -107,7 +107,26 @@ rm setup-device.sh
 > Default values are suggested for each. If you prefer non-interactive mode, set environment variables:
 > `sudo PANTHER_SERVER_NAME=myhost PANTHER_ALLOWED_USER=pi bash setup-device.sh`
 
-### 2. Install the controller
+> [!NOTE]
+> The script prompts for confirmation before overwriting. It requires an existing installation — use `install-app.sh` for a fresh install.
+
+### 2. Connect Tailscale
+
+After the initial setup authenticate the server to your
+[Tailscale network](https://login.tailscale.com/admin/):
+
+```bash
+sudo tailscale up
+```
+
+Follow the browser link to authenticate. Once connected, access your Raspberry through its Tailscale hostname (e.g. `pi-zero`).
+
+> [!TIP]
+> It is usually best to
+> [disable key expiry](https://login.tailscale.com/admin/machines)
+> for the Pi in Tailscale to avoid losing access.
+
+### 3. Install the controller
 
 After the device setup completes, install the controller binary as a `systemd` service:
 
@@ -120,7 +139,7 @@ rm install-app.sh
 > [!TIP]
 > Customize GPIO_PIN and PORT in `/opt/panther-minor-controller/env` as needed.
 
-### 2b. Update the controller
+#### Update the controller
 
 To update to a newer release, run the update script (it stops the service, replaces the binary, then restarts):
 
@@ -130,34 +149,9 @@ sudo bash update-app.sh
 rm update-app.sh
 ```
 
-> [!NOTE]
-> The script prompts for confirmation before overwriting. It requires an existing installation — use `install-app.sh` for a fresh install.
+4. Access the dashboard
 
-### 3. Connect Tailscale
-
-After the initial setup authenticate the server to your
-[Tailscale network](https://login.tailscale.com/admin/):
-
-```bash
-sudo tailscale up
-```
-
-Follow the browser link to authenticate. Once connected, access the dashboard via the Pi's Tailscale IP or hostname:
-
-```text
-http://<pizero-hostname>:8080
-```
-
-SSH access is also possible through Tailscale hostname:
-
-```bash
-ssh -p 2222 <user>@<pizero-hostname>
-```
-
-> [!TIP]
-> It is usually best to
-> [disable key expiry](https://login.tailscale.com/admin/machines)
-> for the Pi in Tailscale to avoid losing access.
+Open your browser and navigate to `http://pi-zero:8080` (replace with your Pi's Tailscale hostname and port if customized). You should see the dashboard with action buttons and real-time status.
 
 ---
 
