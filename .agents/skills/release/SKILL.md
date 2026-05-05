@@ -66,6 +66,6 @@ Report back to the user:
 
 ## Error Handling
 
+- If the version format is unexpected, abort and ask the user to verify it follows `X.Y.Z` semver or is approved to be in a different format (e.g., `X.Y.Z-beta`).
 - If `git push` fails (e.g., remote rejects tag, network issue), inform the user and stop. Do not retry automatically.
-- If `Cargo.toml` version format is unexpected, abort and ask the user to verify it follows `X.Y.Z` semver.
 - Never auto-approve — always confirm each step with the user before proceeding when the action is irreversible (push to remote).
