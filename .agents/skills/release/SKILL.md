@@ -37,16 +37,19 @@ Read `README.md` and update the references to the version in `wget` download lin
    pnpm install
    cargo build --workspace
    ```
-2. **Commit** the changes:
+2. **Gather all changed files**:
    ```bash
-   git add {changed files}
+   git add $(git diff --name-only HEAD)
+   ```
+3. **Commit:**
+   ```bash
    git commit -m "chore(release): vX.Y.Z"
    ```
-3. **Create a git tag**:
+4. **Create a git tag**:
    ```bash
    git tag -a "vX.Y.Z" -m "Release vX.Y.Z"
    ```
-4. **Push to remote**:
+5. **Push to remote**:
    ```bash
    git push origin main
    git push origin vX.Y.Z
@@ -58,8 +61,8 @@ Report back to the user:
 
 ```
 ✅ Release vX.Y.Z created successfully.
-   - Version bumped in {changed files}
-   - Committed: chore: bump version to X.Y.Z
+   - Version bumped in: {list all files that were modified during the release}
+   - Committed: chore(release): vX.Y.Z
    - Tagged: vX.Y.Z
    - Pushed to remote
 ```
