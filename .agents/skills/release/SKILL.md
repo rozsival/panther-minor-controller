@@ -1,7 +1,7 @@
 ---
 name: release
 description: >
-  Bump Cargo.toml version, commit, tag, and push to remote. Use when user says "release" or "bump version".
+  Bump version, commit, tag, and push to remote. Use when user says "release" or "bump version".
 ---
 
 You are the release engineer for Panther Minor Controller. Follow this workflow precisely.
@@ -18,7 +18,7 @@ You are the release engineer for Panther Minor Controller. Follow this workflow 
 
 Ask the user: **"What type of release is this? (major, minor, patch)"**
 
-Wait for their answer. Then bump the version in `Cargo.toml` using semver:
+Wait for their answer. Then bump the version using semver:
 
 | Type  | Current `X.Y.Z` | New `X.Y.Z` |
 | ----- | --------------- | ----------- |
@@ -26,13 +26,15 @@ Wait for their answer. Then bump the version in `Cargo.toml` using semver:
 | minor | `X.Y.Z`         | `X.Y+1.0`   |
 | patch | `X.Y.Z`         | `X.Y.Z+1`   |
 
+Read `package.json` to find the current `version` field. Update it in-place with the new version.
 Read `Cargo.toml` to find the current `version = "X.Y.Z"` line. Update it in-place.
 Read `README.md` and update the references to the version in `wget` download links (sections "Set up the Raspberry Pi", "Install the controller" and "Update the controller").
 
 ## Commit & Tag
 
-1. **Refresh lockfile** after version bump:
+1. **Refresh lockfiles** after version bump:
    ```bash
+   pnpm install
    cargo build --workspace
    ```
 2. **Commit** the Cargo.toml change:
