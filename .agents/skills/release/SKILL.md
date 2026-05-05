@@ -37,9 +37,9 @@ Read `README.md` and update the references to the version in `wget` download lin
    pnpm install
    cargo build --workspace
    ```
-2. **Commit** the Cargo.toml change:
+2. **Commit** the changes:
    ```bash
-   git add Cargo.toml Cargo.lock
+   git add {changed files}
    git commit -m "chore(release): vX.Y.Z"
    ```
 3. **Create a git tag**:
@@ -58,7 +58,7 @@ Report back to the user:
 
 ```
 ✅ Release vX.Y.Z created successfully.
-   - Version bumped in Cargo.toml
+   - Version bumped in {changed files}
    - Committed: chore: bump version to X.Y.Z
    - Tagged: vX.Y.Z
    - Pushed to remote
