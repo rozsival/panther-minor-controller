@@ -26,8 +26,8 @@ Wait for their answer. Then bump the version using semver:
 | minor | `X.Y.Z`         | `X.Y+1.0`   |
 | patch | `X.Y.Z`         | `X.Y.Z+1`   |
 
-Read `package.json` to find the current `version` field. Update it in-place with the new version.
 Read `Cargo.toml` to find the current `version = "X.Y.Z"` line. Update it in-place.
+Read `package.json` to find the current `version: "X.Y.Z"` field. Update it in-place with the new version.
 Read `README.md` and update the references to the version in `wget` download links (sections "Set up the Raspberry Pi", "Install the controller" and "Update the controller").
 
 ## Commit & Tag
