@@ -41,7 +41,7 @@ Read `README.md` and update the references to the version in `wget` download lin
    ```bash
    git add $(git diff --name-only HEAD)
    ```
-3. **Commit:**
+3. **Commit**:
    ```bash
    git commit -m "chore(release): vX.Y.Z"
    ```
