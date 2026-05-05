@@ -10,16 +10,26 @@ on:
         description: 'Tag to release (e.g., v1.0.0)'
         required: true
 
-permissions:
-  contents: write
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  wait-for-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+    steps:
+      - name: Wait for CI checks
+        uses: poseidon/wait-for-status-checks@v0.6.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          match_pattern: '^(qa|test)$'
+
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
