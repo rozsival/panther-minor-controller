@@ -97,7 +97,7 @@ SSH into your Raspberry Pi and run the device setup script:
 > Reconnect with: `ssh -p 2222 <user>@<pizero-ip>`
 
 ```bash
-wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.4/setup-device.sh -O setup-device.sh
+wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.5/setup-device.sh -O setup-device.sh
 sudo bash setup-device.sh
 rm setup-device.sh
 ```
@@ -123,7 +123,7 @@ Follow the browser link to authenticate. Once connected, access your Raspberry t
 After the device setup completes, install the controller binary as a `systemd` service:
 
 ```bash
-wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.4/install-app.sh -O install-app.sh
+wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.5/install-app.sh -O install-app.sh
 sudo bash install-app.sh
 rm install-app.sh
 ```
@@ -136,7 +136,7 @@ rm install-app.sh
 To update to a newer release, run the update script (it stops the service, replaces the binary, then restarts):
 
 ```bash
-wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.4/update-app.sh -O update-app.sh
+wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.5/update-app.sh -O update-app.sh
 sudo bash update-app.sh
 rm update-app.sh
 ```
