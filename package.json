@@ -17,7 +17,7 @@
     "cargo:run": "cargo watch -x run",
     "cargo:test": "cargo test --workspace",
     "postinstall": "is-ci || lefthook install",
-    "prettier": "prettier --check --write ."
+    "prettier:write": "prettier --check --write ."
   },
   "devDependencies": {
     "@commitlint/cli": "21.0.1",
