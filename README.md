@@ -55,7 +55,7 @@ The Controller runs on a **Raspberry Pi Zero 2 W** wired to a **5V relay module*
 | Board        | **Raspberry Pi Zero 2 W**          |
 | Power supply | Official Pi Zero USB PSU           |
 | MicroSD card | 16 GB or more, Class 10 or U1      |
-| Relay module | 5V single-channel with octocoupler |
+| Relay module | 5V single-channel with optocoupler |
 | Wiring       | Jumper wires (female-to-female)    |
 
 ### Wiring
