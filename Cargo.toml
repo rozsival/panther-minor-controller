@@ -6,7 +6,7 @@ description = "Remote controller for Panther Minor AI workstation"
 license = "MIT"
 
 [dependencies]
-hyper = { version = "=1.9.0", features = ["full"] }
+hyper = { version = "=1.10.1", features = ["full"] }
 http-body = "=1.0.1"
 hyper-util = { version = "=0.1.20", features = ["full"] }
 http-body-util = "=0.1.3"
