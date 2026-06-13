@@ -22,7 +22,7 @@
   "devDependencies": {
     "@commitlint/cli": "21.0.2",
     "@commitlint/config-conventional": "21.0.2",
-    "@types/node": "24.12.4",
+    "@types/node": "24.13.2",
     "is-ci": "4.1.0",
     "lefthook": "2.1.9",
     "prettier": "3.8.3",
