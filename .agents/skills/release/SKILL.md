@@ -45,9 +45,9 @@ Read `README.md` and update the references to the version in `wget` download lin
    ```bash
    git commit -m "chore(release): vX.Y.Z"
    ```
-4. **Create a git tag**:
+4. **Create a signed tag**:
    ```bash
-   git tag -a "vX.Y.Z" -m "Release vX.Y.Z"
+    git tag -s vX.Y.Z -m "Release vX.Y.Z"
    ```
 5. **Push to remote**:
    ```bash
