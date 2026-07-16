@@ -37,6 +37,21 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref_name }}
 
+      - name: Generate changelog
+        id: changelog
+        # language=bash
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${{ github.ref_name }}"
+          else
+            RANGE="${{ github.ref_name }}"
+          fi
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" "$RANGE")
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGELOG" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -60,6 +75,7 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v3
         with:
+          body: ${{ steps.changelog.outputs.body }}
           tag_name: ${{ github.ref_name }}
           files: |
             target/aarch64-unknown-linux-gnu/release/panther-minor-controller
