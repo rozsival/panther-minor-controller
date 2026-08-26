@@ -2,7 +2,7 @@
   "name": "@rozsival/panther-minor-controller",
   "version": "1.0.8",
   "private": true,
-  "description": "Remote controller for Panther Minor AI workstation",
+  "description": "Remote control for Panther Minor AI workstation",
   "repository": {
     "type": "git",
     "url": "https://github.com/rozsival/panther-minor-controller.git"
