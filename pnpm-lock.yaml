@@ -188,8 +188,8 @@ importers:
         specifier: 3.0.2
         version: 3.0.2(prettier@3.9.8)
       prettier-plugin-toml:
-        specifier: 2.0.6
-        version: 2.0.6(prettier@3.9.8)
+        specifier: 3.0.2
+        version: 3.0.2(prettier@3.9.8)
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -289,6 +289,9 @@ packages:
     resolution: {integrity: sha512-TzlTVpKPjaqW6qOYjQcYUDuGsLCNsvFHVBXkYGTAnf5V37jCWrE5haKNXzz0WZUtVHjrpV76L1buANjwXMfT8w==}
     engines: {node: '>=22'}
 
+  '@dual-bundle/import-meta-resolve@4.2.1':
+    resolution: {integrity: sha512-id+7YRUgoUX6CgV0DtuhirQWodeeA7Lf4i2x71JS/vtA5pRb/hIGWlw+G6MeXvsM+MXrz0VAydTGElX1rAfgPg==}
+
   '@simple-libs/child-process-utils@2.0.0':
     resolution: {integrity: sha512-dvNoRKLijXnD0XoJAz94pbNuB5GQgDr55UhpSPhffDkTT0Cmcqh9jSCOtwfT2d4H6MI9E7c4SgtMuJXZ6F3c6A==}
     engines: {node: '>=22'}
@@ -297,11 +300,8 @@ packages:
     resolution: {integrity: sha512-fCTuZK4QBa+39Oz9l4OGfJfz+GpwCp3AqO7Zch3to99xHPgstVsRFpeQ8LNd2o1Gv8raL2mCFwiaHh7bFSp5DQ==}
     engines: {node: '>=22'}
 
-  '@taplo/core@0.2.0':
-    resolution: {integrity: sha512-r8bl54Zj1In3QLkiW/ex694bVzpPJ9EhwqT9xkcUVODnVUGirdB1JTsmiIv0o1uwqZiwhi8xNnTOQBRQCpizrQ==}
-
-  '@taplo/lib@0.5.0':
-    resolution: {integrity: sha512-+xIqpQXJco3T+VGaTTwmhxLa51qpkQxCjRwezjFZgr+l21ExlywJFcDfTrNmL6lG6tqb0h8GyJKO3UPGPtSCWg==}
+  '@tombi-toml/wasm-lib@1.5.5':
+    resolution: {integrity: sha512-KFWLTDwNnAsyBqtCmijXxkvfvYVotyEAsT+vt+tZ4ICblklRfpfCI2fxkrSTAwpFYL/u9Ll/iHEf13hEzvFD9Q==}
 
   '@types/node@24.13.6':
     resolution: {integrity: sha512-SGrw/h3KPFshy3OE6ZL53LMBG5vGQQ8/gIpiqz/kRZhPJ7HgwCEs8LBuNtWLa8dvGZVpSF7+Bf+c11HUrCb/yg==}
@@ -657,9 +657,9 @@ packages:
       prettier:
         optional: true
 
-  prettier-plugin-toml@2.0.6:
-    resolution: {integrity: sha512-12N/wBuHa9jd/KVy9pRP20NMKxQfQLMseQCt66lIbLaPLItvGUcSIryE1eZZMJ7loSws6Ig3M2Elc2EreNh76w==}
-    engines: {node: '>=16.0.0'}
+  prettier-plugin-toml@3.0.2:
+    resolution: {integrity: sha512-1t1FOSGaXNy7xN6ffE7ND71VqsnbUtanGEKAD1hTwFDrGIH1cwZ0KH6lMThDVItjdV/UUJWqD3f1+16AHG3eUQ==}
+    engines: {node: '>=18.0.0'}
     peerDependencies:
       prettier: ^3.0.3
 
@@ -684,6 +684,10 @@ packages:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
     engines: {node: '>=10'}
     hasBin: true
+
+  smol-toml@1.9.0:
+    resolution: {integrity: sha512-hpd+HLON7HdZXqYchMM/+LaTTbdK0AU3NngIJ4KVyWbY9bfQqdL9cD+4yf6dUoU2Ap4VsU0JkQi6FxAI1B2mXQ==}
+    engines: {node: '>= 18'}
 
   sort-object-keys@2.1.0:
     resolution: {integrity: sha512-SOiEnthkJKPv2L6ec6HMwhUcN0/lppkeYuN1x63PbyPRrgSPIuBJCiYxYyvWRTtjMlOi14vQUCGUJqS6PLVm8g==}
@@ -862,17 +866,15 @@ snapshots:
 
   '@conventional-changelog/template@1.2.1': {}
 
+  '@dual-bundle/import-meta-resolve@4.2.1': {}
+
   '@simple-libs/child-process-utils@2.0.0':
     dependencies:
       '@simple-libs/stream-utils': 2.0.0
 
   '@simple-libs/stream-utils@2.0.0': {}
 
-  '@taplo/core@0.2.0': {}
-
-  '@taplo/lib@0.5.0':
-    dependencies:
-      '@taplo/core': 0.2.0
+  '@tombi-toml/wasm-lib@1.5.5': {}
 
   '@types/node@24.13.6':
     dependencies:
@@ -1119,10 +1121,12 @@ snapshots:
     optionalDependencies:
       prettier: 3.9.8
 
-  prettier-plugin-toml@2.0.6(prettier@3.9.8):
+  prettier-plugin-toml@3.0.2(prettier@3.9.8):
     dependencies:
-      '@taplo/lib': 0.5.0
+      '@dual-bundle/import-meta-resolve': 4.2.1
+      '@tombi-toml/wasm-lib': 1.5.5
       prettier: 3.9.8
+      smol-toml: 1.9.0
 
   prettier@3.9.8: {}
 
@@ -1133,6 +1137,8 @@ snapshots:
   resolve-from@5.0.0: {}
 
   semver@7.8.5: {}
+
+  smol-toml@1.9.0: {}
 
   sort-object-keys@2.1.0: {}
 
