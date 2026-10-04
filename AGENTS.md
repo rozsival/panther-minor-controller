@@ -3,7 +3,14 @@
 Panther Minor Controller is a remote control for [Panther Minor](https://github.com/rozsival/panther-minor) AI workstation via GPIO relay on Raspberry Pi Zero 2 W.
 It allows power on/off, force shutdown, and hard reset through a simple web dashboard and API.
 
-Rust 2021 · Tokio · Hyper 1.x · MIT
+Rust 2024 · Tokio · Hyper 1.x · MIT
+
+## Documentation
+
+- `README.md` — minimal project overview, quick start, ownership; links to `docs/`
+- `docs/README.md` — documentation index; one domain per file in `docs/` (follow its conventions when adding or editing docs)
+- `docs/api.md` — API contract (endpoints, response fields, state guards); update it with every endpoint change
+- `docs/operations.md` — environment variables and status probe; update it with every new or changed variable
 
 ## Commands
 
@@ -47,7 +54,7 @@ src/
 | POST   | `/api/reset`     | Hard reset   | 5s off, 2s pause, 0.5s on                  |
 
 - API responses are JSON. Unknown paths → 404 JSON.
-- Idempotency: power-on, power-off, shutdown, and reset reject calls when the device is already in the target state (400 error).
+- Idempotency: action endpoints return 400 without touching the relay — power-on when already on; power-off, shutdown, and reset when already off.
 
 ## Testing
 
@@ -63,6 +70,7 @@ cargo test power_on    # Filter by name
 - `GPIO_PIN` — BCM pin (default: 17)
 - `PORT` — HTTP port (default: 8080)
 - `STATUS_POLL_MS` — Status polling interval (default: 2000)
+- `STATUS_HOST` + `STATUS_PORT` — TCP status probe target (both or neither; see `docs/operations.md`)
 
 ## Release
 
