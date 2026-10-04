@@ -100,7 +100,7 @@ committing, tagging `vX.Y.Z` and pushing. The `release` agent skill performs the
 | --------------------------------- | ------------------------------------------- |
 | `AGENTS.md`                       | Project context and rules for AI assistants |
 | `.github/copilot-instructions.md` | Copilot PR review guidance                  |
-| `.agents/skills/release/`         | Version bump, commit, tag and push          |
+| `.agents/skills/release/`         | Version bump on a release branch, PR, tag   |
 
 ---
 
