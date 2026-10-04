@@ -28,11 +28,11 @@ Wait for their answer. Then bump the version using semver:
 
 The version lives in exactly three authored files:
 
-| File           | Occurrence                                                                                                           |
-| -------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `Cargo.toml`   | `version = "X.Y.Z"` under `[package]` — not the pinned dependency versions                                           |
-| `package.json` | `"version": "X.Y.Z"`                                                                                                 |
-| `README.md`    | `vX.Y.Z` in three `wget` release URLs — "Set up the Raspberry Pi", "Install the controller", "Update the controller" |
+| File           | Occurrence                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------- |
+| `Cargo.toml`   | `version = "X.Y.Z"` under `[package]` — not the pinned dependency versions                                    |
+| `package.json` | `"version": "X.Y.Z"`                                                                                          |
+| `README.md`    | `vX.Y.Z` in three `wget` release URLs in "Quick start" — `setup-device.sh`, `install-app.sh`, `update-app.sh` |
 
 `Cargo.lock` also carries it, at `name = "panther-minor-controller"` / `version = "X.Y.Z"`. It is **not**
 in that table on purpose.
@@ -48,7 +48,7 @@ grep -rn "<CURRENT_VERSION>" --include=*.toml --include=*.json --include=*.md . 
   | grep -vE "node_modules|/\.git/|target/|lock"
 ```
 
-Update each match in-place. Read **only the matching line ranges** (e.g. `README.md:95-105`) if your edit
+Update each match in-place. Read **only the matching line ranges** (e.g. `README.md:38-64`) if your edit
 tool needs a fresh read to anchor a hunk — never read a whole file to change one line.
 
 ## Commit & Tag
