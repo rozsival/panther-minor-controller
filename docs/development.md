@@ -83,24 +83,26 @@ cargo test power_on      # filter by name
 
 ## 🔁 CI and releases
 
-| Workflow                        | Trigger                         | Jobs                                                                                                              |
-| ------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml`      | Push / PR to `main`             | `qa`: commitlint, `cargo fmt --check`, `prettier --check`, `cargo check`, Clippy; `test`: `cargo test`            |
-| `.github/workflows/release.yml` | Tag `v*.*.*` or manual dispatch | Validates the SemVer tag, cross-compiles `aarch64-unknown-linux-gnu`, publishes a release with a commit changelog |
+| Workflow                        | Trigger                           | Jobs                                                                                                                                   |
+| ------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/ci.yml`      | Push / PR to `main`               | `qa`: commitlint, `cargo fmt --check`, `prettier --check`, `cargo check`, Clippy; `test`: `cargo test`                                 |
+| `.github/workflows/release.yml` | Push to `main` or manual dispatch | On a `chore(release): vX.Y.Z` commit: cross-compiles `aarch64-unknown-linux-gnu`, tags it, publishes a release with a commit changelog |
 
 Each release publishes four assets: the `panther-minor-controller` binary and the three scripts from `scripts/`. The
 release profile is size-optimized: `opt-level = "z"`, LTO, `strip`, one codegen unit.
 
-Releases are cut from `main` by bumping the version in `Cargo.toml`, `package.json` and the root README quick start,
-committing, tagging `vX.Y.Z` and pushing. The `release` agent skill performs the whole sequence.
+Releases go through a `release/vX.Y.Z` branch: bump the version in `Cargo.toml`, `package.json` and the root README
+quick start, commit as `chore(release): vX.Y.Z` and open a PR. Rebase-merging it is the release: `release.yml` creates
+the tag on the merged commit, since a tag pushed with `GITHUB_TOKEN` would not trigger a workflow. Re-run a release with
+`gh workflow run release.yml -f version=vX.Y.Z`. The `release` agent skill performs the whole sequence up to your merge.
 
 ## 🤖 Agent assets
 
-| Asset                             | Purpose                                     |
-| --------------------------------- | ------------------------------------------- |
-| `AGENTS.md`                       | Project context and rules for AI assistants |
-| `.github/copilot-instructions.md` | Copilot PR review guidance                  |
-| `.agents/skills/release/`         | Version bump on a release branch, PR, tag   |
+| Asset                             | Purpose                                           |
+| --------------------------------- | ------------------------------------------------- |
+| `AGENTS.md`                       | Project context and rules for AI assistants       |
+| `.github/copilot-instructions.md` | Copilot PR review guidance                        |
+| `.agents/skills/release/`         | Version bump on a release branch and PR to `main` |
 
 ---
 
