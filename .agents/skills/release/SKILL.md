@@ -121,7 +121,8 @@ tool needs a fresh read to anchor a hunk — never read a whole file to change o
 Merging is the release: the push to `main` runs `.github/workflows/release.yml`, which finds the
 `chore(release): vX.Y.Z` commit, cross-compiles the aarch64 binary the `README.md` `wget` URLs download,
 creates the `vX.Y.Z` tag on that commit and publishes the GitHub release with its assets. Never create or
-push the tag yourself — a tag on `main` before the workflow runs makes it fail as a conflict.
+push the tag yourself: the workflow accepts an existing `vX.Y.Z` only on that release commit (the user's
+recovery path below) and fails on a tag anywhere else.
 
 The merge alone completes the release: a session that ends at the hand-off leaves nothing undone. The steps
 below only verify it and tidy the local checkout.
@@ -142,8 +143,9 @@ below only verify it and tidy the local checkout.
    gh run watch <RUN_ID> --exit-status
    ```
    If it fails, stop and report the failing step. Retrying is the user's call, and the user's to run: the agent
-   token cannot start runs. Give them `gh run rerun <RUN_ID> --failed`, or
-   `gh workflow run release.yml -f version=vX.Y.Z` if the run is gone.
+   token cannot start runs. Give them `gh run rerun <RUN_ID> --failed`. If no run exists for the SHA, or the
+   run failed creating the tag (`GITHUB_TOKEN` may not tag an older commit), they push the tag themselves —
+   `git tag -s vX.Y.Z <SHA> -m "Release vX.Y.Z" && git push origin vX.Y.Z` — which runs the workflow again.
 4. **Verify the release and tag**:
    ```bash
    gh release view vX.Y.Z --json url,assets --jq '.url, .assets[].name'
