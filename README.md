@@ -37,7 +37,7 @@ button header and a Tailscale account — see [Hardware & wiring](docs/hardware.
 
 ```bash
 # 1. Prepare and harden the Pi
-wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.9/setup-device.sh -O setup-device.sh
+wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.10/setup-device.sh -O setup-device.sh
 sudo bash setup-device.sh && rm setup-device.sh
 
 # 2. Reconnect on port 2222 and join Tailscale
@@ -45,7 +45,7 @@ ssh -p 2222 <user>@<pi-ip>
 sudo tailscale up
 
 # 3. Install the controller service
-wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.9/install-app.sh -O install-app.sh
+wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.10/install-app.sh -O install-app.sh
 sudo bash install-app.sh && rm install-app.sh
 ```
 
@@ -59,7 +59,7 @@ Point the status probe at the workstation in `/opt/panther-minor-controller/env`
 To update an existing installation later:
 
 ```bash
-wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.9/update-app.sh -O update-app.sh
+wget https://github.com/rozsival/panther-minor-controller/releases/download/v1.0.10/update-app.sh -O update-app.sh
 sudo bash update-app.sh && rm update-app.sh
 ```
 
