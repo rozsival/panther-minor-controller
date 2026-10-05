@@ -30,7 +30,7 @@
     "prettier-plugin-toml": "3.0.2",
     "typescript": "7.0.2"
   },
-  "packageManager": "pnpm@12.9.0",
+  "packageManager": "pnpm@12.9.1",
   "engines": {
     "node": "24.x"
   }
