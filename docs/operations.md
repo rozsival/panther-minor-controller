@@ -91,6 +91,30 @@ Check the active probe target in the startup log:
 | `/opt/panther-minor-controller/env`                          | Environment file (mode `600`)                                          |
 | `/etc/systemd/system/panther-minor-controller.service`       | Unit: `Restart=on-failure`, `RestartSec=5`, after `tailscaled.service` |
 
+## 📜 System logs
+
+Raspberry Pi OS keeps the `systemd` journal in RAM by default
+(`/usr/lib/systemd/journald.conf.d/40-rpi-volatile-storage.conf`), so a hang followed by a power cycle wipes every log
+that could explain it. `setup-device.sh` overrides this with
+`/etc/systemd/journald.conf.d/90-panther-minor-controller.conf`:
+
+| Setting           | Value        | Why                                                                          |
+| ----------------- | ------------ | ---------------------------------------------------------------------------- |
+| `Storage`         | `persistent` | Journal lives in `/var/log/journal` and survives reboots                     |
+| `SystemMaxUse`    | `100M`       | Bounds disk use and SD card wear                                             |
+| `SyncIntervalSec` | `1m`         | A hard power cut loses at most about a minute of logs instead of 5 (default) |
+
+| Task                             | Command                                        |
+| -------------------------------- | ---------------------------------------------- |
+| List boots (each reboot is one)  | `journalctl --list-boots`                      |
+| Last messages before the reboot  | `journalctl -b -1 -e`                          |
+| Warnings and errors of that boot | `journalctl -b -1 -p warning`                  |
+| Controller logs of that boot     | `journalctl -b -1 -u panther-minor-controller` |
+| Disk used by the journal         | `journalctl --disk-usage`                      |
+
+A boot whose log ends abruptly, without the usual shutdown messages, ended in a hang or power loss rather than a clean
+reboot.
+
 ## ⬆️ Updating
 
 Download and run `update-app.sh` — the versioned command is in the

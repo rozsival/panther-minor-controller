@@ -265,6 +265,25 @@ fi
 loginctl enable-linger "$PANTHER_ALLOWED_USER" 2>/dev/null || true
 log_success "Shell set up with Starship prompt for $PANTHER_ALLOWED_USER."
 
+# -- Step 10: Persistent journal ----------------------------------------------
+log_info "Enabling persistent system journal..."
+
+# Raspberry Pi OS keeps the journal in RAM (/usr/lib/systemd/journald.conf.d/40-rpi-volatile-storage.conf),
+# so everything logged before a hang or reboot is lost. This drop-in sorts after it and after raspi-config's 80-*.
+JOURNALD_DROPIN="/etc/systemd/journald.conf.d/90-panther-minor-controller.conf"
+mkdir -p "$(dirname "$JOURNALD_DROPIN")"
+cat >"$JOURNALD_DROPIN" <<'EOF'
+# Managed by panther-minor-controller setup-device.sh
+[Journal]
+Storage=persistent
+SystemMaxUse=100M
+SyncIntervalSec=1m
+EOF
+
+systemctl restart systemd-journald
+journalctl --flush
+log_success "Journal persists across reboots (journalctl --list-boots)."
+
 # -- Summary ------------------------------------------------------------------
 print_summary_table \
   "Panther Minor Controller setup complete!" \
@@ -274,7 +293,8 @@ print_summary_table \
   "Tailscale" "installed" \
   "Firewall" "UFW active" \
   "fail2ban" "active" \
-  "Starship" "configured"
+  "Starship" "configured" \
+  "Journal" "persistent"
 
 log_warn "⚠  To finish Tailscale setup, run: sudo tailscale up"
 echo ""

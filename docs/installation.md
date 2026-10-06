@@ -45,17 +45,18 @@ Override variables must be passed through `sudo` to take effect, e.g.
 
 #### What `setup-device.sh` configures
 
-| #   | Step      | What it does                                                                                                                  |
-| --- | --------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Timezone  | Sets the system timezone                                                                                                      |
-| 2   | Packages  | `apt update` + `upgrade`; installs `fail2ban`, `git`, `htop`, `jq`, `starship`, `tree`, `tmux`, `ufw`, `unattended-upgrades`  |
-| 3   | Git       | Name, email, `pull.rebase true` and the `store` credential helper for the allowed user                                        |
-| 4   | SSH       | Backs up `sshd_config`, removes drop-ins, sets the port, key-only auth, no root login, `AllowUsers`; validates with `sshd -t` |
-| 5   | UFW       | Resets the firewall, denies all inbound traffic except the SSH port                                                           |
-| 6   | GPIO      | Adds the allowed user to the `gpio` group                                                                                     |
-| 7   | fail2ban  | `sshd` jail on the SSH port: 3 retries within 10 minutes → 1 hour ban                                                         |
-| 8   | Tailscale | Installs the Tailscale agent                                                                                                  |
-| 9   | Shell     | Starship prompt in `.bashrc`, `loginctl enable-linger` for the allowed user                                                   |
+| #   | Step      | What it does                                                                                                                       |
+| --- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Timezone  | Sets the system timezone                                                                                                           |
+| 2   | Packages  | `apt update` + `upgrade`; installs `fail2ban`, `git`, `htop`, `jq`, `starship`, `tree`, `tmux`, `ufw`, `unattended-upgrades`       |
+| 3   | Git       | Name, email, `pull.rebase true` and the `store` credential helper for the allowed user                                             |
+| 4   | SSH       | Backs up `sshd_config`, removes drop-ins, sets the port, key-only auth, no root login, `AllowUsers`; validates with `sshd -t`      |
+| 5   | UFW       | Resets the firewall, denies all inbound traffic except the SSH port                                                                |
+| 6   | GPIO      | Adds the allowed user to the `gpio` group                                                                                          |
+| 7   | fail2ban  | `sshd` jail on the SSH port: 3 retries within 10 minutes → 1 hour ban                                                              |
+| 8   | Tailscale | Installs the Tailscale agent                                                                                                       |
+| 9   | Shell     | Starship prompt in `.bashrc`, `loginctl enable-linger` for the allowed user                                                        |
+| 10  | Journal   | Persistent `systemd` journal (capped at 100 MB) so logs and boots survive a reboot — see [System logs](operations.md#-system-logs) |
 
 Full hardening details are in [Networking & security](networking.md).
 
