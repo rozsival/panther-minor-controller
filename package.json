@@ -16,6 +16,7 @@
     "cargo:fmt": "cargo fmt",
     "cargo:run": "cargo watch -x run",
     "cargo:test": "cargo test --workspace",
+    "check:sh": "shellcheck scripts/*.sh",
     "postinstall": "is-ci || lefthook install",
     "prettier:write": "prettier --check --write ."
   },
@@ -27,7 +28,9 @@
     "lefthook": "2.1.17",
     "prettier": "3.9.9",
     "prettier-plugin-packagejson": "3.0.2",
+    "prettier-plugin-sh": "0.20.2",
     "prettier-plugin-toml": "3.0.2",
+    "shellcheck": "4.1.0",
     "typescript": "7.0.2"
   },
   "packageManager": "pnpm@12.9.1",

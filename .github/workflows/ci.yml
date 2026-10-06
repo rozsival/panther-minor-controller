@@ -51,6 +51,9 @@ jobs:
       - name: Check types
         run: cargo check --workspace
 
+      - name: Lint shell scripts
+        run: pnpm run check:sh
+
       - name: Lint with Clippy
         run: cargo clippy --workspace -- -D warnings
 

@@ -27,7 +27,7 @@ print_summary_table() {
   local title="$1"
   shift
 
-  if (( $# % 2 != 0 )); then
+  if (($# % 2 != 0)); then
     printf 'print_summary_table requires label/value pairs\n' >&2
     return 1
   fi
@@ -40,7 +40,7 @@ print_summary_table() {
   local row_text
   local border
 
-  while (( $# > 0 )); do
+  while (($# > 0)); do
     labels+=("$1")
     values+=("$2")
     if ((${#1} > label_width)); then
@@ -192,9 +192,8 @@ fi
 
 # Validate before applying
 if ! sshd -t 2>&1; then
-  log_error "sshd configuration is invalid — aborting to avoid locking you out."
   cp "${SSHD_CONFIG}.orig" "$SSHD_CONFIG"
-  log_info "Restored original sshd_config."
+  log_error "sshd configuration is invalid — restored original sshd_config and aborted to avoid locking you out."
 fi
 
 systemctl restart ssh
@@ -258,6 +257,7 @@ mkdir -p "/home/$PANTHER_ALLOWED_USER"
 
 BASHRC="/home/$PANTHER_ALLOWED_USER/.bashrc"
 if ! grep -qF 'starship init bash' "$BASHRC" 2>/dev/null; then
+  # shellcheck disable=SC2016 # written literally, expanded by bash at login
   printf '\n# Starship prompt\neval "$(starship init bash)"\n' >>"$BASHRC"
   chown "$PANTHER_ALLOWED_USER:$PANTHER_ALLOWED_USER" "$BASHRC"
 fi

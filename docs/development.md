@@ -9,17 +9,18 @@
 
 ## 🧰 Toolchain
 
-| Tool       | Version / config                         | Role                                        |
-| ---------- | ---------------------------------------- | ------------------------------------------- |
-| Rust       | stable, edition 2024 (`Cargo.toml`)      | Application                                 |
-| Node.js    | `24.x` (`engines`)                       | Tooling only                                |
-| pnpm       | `packageManager` in `package.json`       | Package manager and script runner           |
-| Prettier   | `prettier.config.js` (`printWidth: 120`) | Markdown, JSON, TOML, YAML formatting       |
-| rustfmt    | defaults                                 | Rust formatting                             |
-| Clippy     | `-D warnings`                            | Rust linting                                |
-| Lefthook   | `lefthook.yml`                           | Git hooks                                   |
-| commitlint | `commitlint.config.js`                   | Conventional Commits enforcement            |
-| Renovate   | `renovate.json`                          | Dependency updates, auto-merged after 1 day |
+| Tool       | Version / config                                                | Role                                                                                            |
+| ---------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Rust       | stable, edition 2024 (`Cargo.toml`)                             | Application                                                                                     |
+| Node.js    | `24.x` (`engines`)                                              | Tooling only                                                                                    |
+| pnpm       | `packageManager` in `package.json`                              | Package manager and script runner                                                               |
+| Prettier   | `prettier.config.js` (`printWidth: 120`)                        | Markdown, JSON, TOML, YAML formatting; shell (`*.sh`, via `prettier-plugin-sh` as `shfmt -i 2`) |
+| ShellCheck | `shellcheck` package (pins the binary, downloaded on first run) | Lints `scripts/*.sh`                                                                            |
+| rustfmt    | defaults                                                        | Rust formatting                                                                                 |
+| Clippy     | `-D warnings`                                                   | Rust linting                                                                                    |
+| Lefthook   | `lefthook.yml`                                                  | Git hooks                                                                                       |
+| commitlint | `commitlint.config.js`                                          | Conventional Commits enforcement                                                                |
+| Renovate   | `renovate.json`                                                 | Dependency updates, auto-merged after 1 day                                                     |
 
 ```bash
 pnpm install   # installs the Git hooks outside CI
@@ -39,21 +40,22 @@ the status probe, then open `http://localhost:8080`.
 
 ## ✅ Quality checks
 
-| Task                   | Command                                   | `pnpm` alias              |
-| ---------------------- | ----------------------------------------- | ------------------------- |
-| Build                  | `cargo build --workspace`                 | `pnpm run cargo:build`    |
-| Type-check             | `cargo check --workspace`                 | `pnpm run cargo:check`    |
-| Lint                   | `cargo clippy --workspace -- -D warnings` | `pnpm run cargo:clippy`   |
-| Format Rust            | `cargo fmt`                               | `pnpm run cargo:fmt`      |
-| Format everything else | `prettier --check --write .`              | `pnpm run prettier:write` |
-| Test                   | `cargo test --workspace`                  | `pnpm run cargo:test`     |
+| Task                                 | Command                                   | `pnpm` alias              |
+| ------------------------------------ | ----------------------------------------- | ------------------------- |
+| Build                                | `cargo build --workspace`                 | `pnpm run cargo:build`    |
+| Type-check                           | `cargo check --workspace`                 | `pnpm run cargo:check`    |
+| Lint                                 | `cargo clippy --workspace -- -D warnings` | `pnpm run cargo:clippy`   |
+| Format Rust                          | `cargo fmt`                               | `pnpm run cargo:fmt`      |
+| Lint shell                           | `shellcheck scripts/*.sh`                 | `pnpm run check:sh`       |
+| Format everything else (incl. shell) | `prettier --check --write .`              | `pnpm run prettier:write` |
+| Test                                 | `cargo test --workspace`                  | `pnpm run cargo:test`     |
 
 ### Git hooks
 
-| Hook         | Runs                                                                                                               |
-| ------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `commit-msg` | `commitlint`                                                                                                       |
-| `pre-commit` | On `*.rs`: `cargo fmt`, `cargo check`, `cargo clippy -D warnings`; on MD/TOML/YAML/JSON: Prettier; fixes re-staged |
+| Hook         | Runs                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `commit-msg` | `commitlint`                                                                                                                                             |
+| `pre-commit` | On `*.rs`: `cargo fmt`, `cargo check`, `cargo clippy -D warnings`; on `*.sh`: Prettier, then ShellCheck; on MD/TOML/YAML/JSON: Prettier; fixes re-staged |
 
 ## 🧪 Testing
 
@@ -85,7 +87,7 @@ cargo test power_on      # filter by name
 
 | Workflow                        | Trigger                        | Jobs                                                                                                                                   |
 | ------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml`      | Push / PR to `main`            | `qa`: commitlint, `cargo fmt --check`, `prettier --check`, `cargo check`, Clippy; `test`: `cargo test`                                 |
+| `.github/workflows/ci.yml`      | Push / PR to `main`            | `qa`: commitlint, `cargo fmt --check`, `prettier --check`, `cargo check`, Clippy, ShellCheck; `test`: `cargo test`                     |
 | `.github/workflows/release.yml` | Push to `main` or tag `v*.*.*` | On a `chore(release): vX.Y.Z` commit: cross-compiles `aarch64-unknown-linux-gnu`, tags it, publishes a release with a commit changelog |
 
 Each release publishes four assets: the `panther-minor-controller` binary and the three scripts from `scripts/`. The

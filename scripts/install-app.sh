@@ -39,7 +39,7 @@ print_summary_table() {
   local title="$1"
   shift
 
-  if (( $# % 2 != 0 )); then
+  if (($# % 2 != 0)); then
     printf 'print_summary_table requires label/value pairs\n' >&2
     return 1
   fi
@@ -52,7 +52,7 @@ print_summary_table() {
   local row_text
   local border
 
-  while (( $# > 0 )); do
+  while (($# > 0)); do
     labels+=("$1")
     values+=("$2")
     if ((${#1} > label_width)); then

@@ -22,7 +22,8 @@ cargo clippy --workspace -- -D warnings # Lint with Clippy
 cargo check --workspace                 # Check types without building
 cargo fmt                               # Format code with rustfmt
 pnpm install                            # Install Node.js deps (linting, formatting)
-pnpm run prettier:write                 # Format non-Rust files (Markdown, JSON, TOML, YAML)
+pnpm run prettier:write                 # Format non-Rust files (Markdown, JSON, TOML, YAML, shell)
+pnpm run check:sh                       # Lint shell scripts with ShellCheck
 ```
 
 ## Architecture

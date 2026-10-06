@@ -21,6 +21,20 @@ pre-commit:
         - '**/*.rs'
       stage_fixed: true
 
+    # In order: format the shell sources, then lint what was formatted.
+    - name: shell
+      group:
+        piped: true
+        jobs:
+          - run: pnpm prettier --write {staged_files}
+            glob:
+              - '**/*.sh'
+            stage_fixed: true
+
+          - run: pnpm run check:sh
+            glob:
+              - '**/*.sh'
+
     - run: pnpm prettier --write {staged_files}
       glob:
         - '**/*.md'
