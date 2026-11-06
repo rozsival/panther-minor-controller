@@ -33,7 +33,7 @@
     "shellcheck": "4.1.0",
     "typescript": "7.0.2"
   },
-  "packageManager": "pnpm@12.16.1",
+  "packageManager": "pnpm@12.18.0",
   "engines": {
     "node": "26.x"
   }
